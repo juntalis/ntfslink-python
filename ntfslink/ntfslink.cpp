@@ -1,12 +1,38 @@
-#include "junction.h"
+#include "ntfslink.h"
+#include <Shlwapi.h>
 #include <tchar.h>
 #include <mbstring.h>
 
 // Maximum reparse point name size
 #define MAX_NAME_LENGTH		1024
 
+bool IsFolder(LPTSTR pszPath)
+{
+	DWORD dwAttr = GetFileAttributes(pszPath);
+	if(dwAttr & FILE_ATTRIBUTE_DIRECTORY) return true;
+	return false;
+}
 
-HANDLE OpenDirectory(LPCTSTR pszPath, BOOL bReadWrite) {
+create_result CheckPaths(LPTSTR newPath, LPTSTR targetPath, LPTSTR outPath, LPTSTR outTarget)
+{
+	PTCHAR		filePart;
+		// Get the full path referenced by the target
+	if( !GetFullPathName(targetPath, MAX_PATH, outTarget, &filePart ))
+		return create_invalid_target;
+
+	// Get the full path referenced by the directory
+	if( !GetFullPathName(newPath, MAX_PATH, outPath, &filePart ))
+		return create_invalid_path;
+	
+	if(!PathFileExists(outTarget))
+		return create_invalid_target;
+	
+	return create_success;
+}
+
+
+HANDLE OpenDirectory(LPCTSTR pszPath, BOOL bReadWrite)
+{
 // Obtain restore privilege in case we don't have it
   HANDLE hToken;
   TOKEN_PRIVILEGES tp;
@@ -30,7 +56,8 @@ HANDLE OpenDirectory(LPCTSTR pszPath, BOOL bReadWrite) {
 
 #define DIR_ATTR  (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)
 
-bool IsJunction(LPTSTR pszDir) {
+bool IsJunction(LPTSTR pszDir)
+{
 	DWORD dwAttr = ::GetFileAttributes(pszDir);
 	if (dwAttr == -1) return false;  // Not exists
 	if ((dwAttr & DIR_ATTR) != DIR_ATTR) return false;  // Not dir or no reparse point
@@ -48,7 +75,8 @@ bool IsJunction(LPTSTR pszDir) {
 }
 
 
-delete_result DeleteJunctionRecord(LPTSTR pszDir) {
+delete_result DeleteJunctionRecord(LPTSTR pszDir)
+{
 	if(!IsJunction(pszDir))
 		return delete_invalid;
 	HANDLE hDir = OpenDirectory(pszDir, TRUE);
@@ -67,7 +95,8 @@ delete_result DeleteJunctionRecord(LPTSTR pszDir) {
 }
 
 
-delete_result DeleteJunction(LPTSTR pszDir) {
+delete_result DeleteJunction(LPTSTR pszDir)
+{
 	delete_result result = DeleteJunctionRecord(pszDir);
 	if(result != delete_success) return result;
 	if(RemoveDirectory(pszDir)) return delete_success;
@@ -82,22 +111,21 @@ create_result CreateJunction(LPTSTR LinkDirectory, LPTSTR LinkTarget)
 	TCHAR		fileSystem[MAX_PATH] = _T("");
 	TCHAR		targetFileName[MAX_PATH];
 	TCHAR		targetNativeFileName[MAX_PATH];
-	PTCHAR		filePart;
 	HANDLE		hFile;
 	WCHAR		creationPath[MAX_PATH];
 	DWORD		returnedLength;
 	PREPARSE_MOUNTPOINT_DATA_BUFFER reparseInfo = 
 		(PREPARSE_MOUNTPOINT_DATA_BUFFER) reparseBuffer;
 
-	// Get the full path referenced by the target
-	if( !GetFullPathName(LinkTarget, MAX_PATH, targetFileName, &filePart ))
+	// Validate target and new path.
+	create_result result = CheckPaths(LinkDirectory, LinkTarget, directoryFileName, targetFileName);
+	if(result != create_success)
+		return result;
+
+	// Make sure target is a folder.
+	if(!IsFolder(targetFileName))
 		return create_invalid_target;
-
-	// Get the full path referenced by the directory
-	if( !GetFullPathName( LinkDirectory, MAX_PATH, directoryFileName, &filePart ))
-		return create_invalid_junction;
-
-	//
+	
 	// Make sure that directory is on NTFS volume
 	volumeName[0] = directoryFileName[0];
 	GetVolumeInformation( volumeName, NULL, 0, NULL, NULL, NULL, fileSystem,
@@ -148,3 +176,41 @@ create_result CreateJunction(LPTSTR LinkDirectory, LPTSTR LinkTarget)
 	return create_success;
 }
 
+create_result CreateHardLink(LPTSTR LinkPath, LPTSTR LinkTarget)
+{
+	TCHAR		pathFileName[MAX_PATH];
+	TCHAR		targetFileName[MAX_PATH];
+
+	create_result result = CheckPaths(LinkPath, LinkTarget, pathFileName, targetFileName);
+	if(result != create_success)
+		return result;
+	
+	if(IsFolder(targetFileName))
+		return create_invalid_target;
+	
+	if(!CreateHardLink(pathFileName, targetFileName, NULL))
+		return create_error_create;
+	
+	return create_success;
+}
+
+// The link target is a file.
+#define SYMLINK_FILE 0x0
+// The link target is a directory.
+#define SYMLINK_DIR 0x1
+
+create_result CreateSymbolicLink(LPTSTR LinkPath, LPTSTR LinkTarget)
+{
+	TCHAR		pathFileName[MAX_PATH];
+	TCHAR		targetFileName[MAX_PATH];
+	
+	create_result result = CheckPaths(LinkPath, LinkTarget, pathFileName, targetFileName);
+	if(result != create_success)
+		return result;
+	
+	DWORD dwFlags = IsFolder(targetFileName) ? SYMLINK_DIR : SYMLINK_FILE;
+	if(!CreateSymbolicLink(pathFileName, targetFileName, dwFlags))
+		return create_error_create;
+	
+	return create_success;
+}

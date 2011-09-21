@@ -13,22 +13,22 @@ if version_info >= (2,6,0):
         import imp
         fp = None
         try:
-            fp, pathname, description = imp.find_module('_junction', [dirname(__file__)])
+            fp, pathname, description = imp.find_module('_ntfslink', [dirname(__file__)])
         except ImportError:
-            import _junction
-            return _junction
+            import _ntfslink
+            return _ntfslink
         if fp is not None:
             try:
-                _mod = imp.load_module('_junction', fp, pathname, description)
+                _mod = imp.load_module('_ntfslink', fp, pathname, description)
             finally:
                 fp.close()
             return _mod
-    _junction = swig_import_helper()
+    _ntfslink = swig_import_helper()
     del swig_import_helper
 else:
-    import _junction
+    import _ntfslink
 del version_info
-from _junction import *
+from _ntfslink import *
 try:
     _swig_property = property
 except NameError:
@@ -78,26 +78,19 @@ def _swig_setattr_nondynamic_method(set):
     return set_attr
 
 
-__name__ = 'junction'
-__version__ = '1.0'
-__author__ = 'Charles Grunwald (Juntalis) <cgrunwald@gmail.com>'
-__all__ = ['CREATE_ERROR_CREATE', 'CREATE_ERROR_SET', 'CREATE_INVALID_JUNCTION', 'CREATE_INVALID_TARGET', 'CREATE_NOT_SUPPORTED', 'CREATE_SUCCESS', 'DELETE_ERROR', 'DELETE_INVALID', 'DELETE_SUCCESS', 'create', 'delete', 'is_junction', 'isdir','rm', 'rmdir', 'unlink']
-
-def isdir(folder):
-    """ Alias to junction.is_junction(folder) """
-    return _junction.is_junction(folder)
+__all__ = ['CREATE_ERROR_CREATE', 'CREATE_ERROR_SET', 'CREATE_INVALID_JUNCTION', 'CREATE_INVALID_TARGET', 'CREATE_NOT_SUPPORTED', 'CREATE_SUCCESS', 'DELETE_ERROR', 'DELETE_INVALID', 'DELETE_SUCCESS', 'junction', 'delete', 'is_junction', 'isdir','rm', 'rmdir', 'unlink', 'symlink', 'hardlink']
 
 def check(folder):
     """ Alias to junction.is_junction(folder) """
-    return _junction.is_junction(folder)
+    return _ntfslink.is_junction(folder)
 
 def rmdir(folder):
     """ Alias to junction.delete(folder) """
-    return _junction.delete(folder)
+    return _ntfslink.delete(folder)
 
 def rm(folder):
     """ Alias to junction.delete(folder) """
-    return _junction.delete(folder)
+    return _ntfslink.delete(folder)
 
 
 

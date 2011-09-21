@@ -3485,16 +3485,16 @@ static swig_module_info swig_module = {swig_types, 16, 0, 0, 0, 0};
 #define SWIG_TypeQuery SWIG_Python_TypeQuery
 
 /*-----------------------------------------------
-              @(target):= _junction.so
+              @(target):= _ntfslink.so
   ------------------------------------------------*/
 #if PY_VERSION_HEX >= 0x03000000
-#  define SWIG_init    PyInit__junction
+#  define SWIG_init    PyInit__ntfslink
 
 #else
-#  define SWIG_init    init_junction
+#  define SWIG_init    init_ntfslink
 
 #endif
-#define SWIG_name    "_junction"
+#define SWIG_name    "_ntfslink"
 
 #define SWIGVERSION 0x020004 
 #define SWIG_VERSION SWIGVERSION
@@ -3570,7 +3570,7 @@ namespace swig {
 
 
 #define SWIG_FILE_WITH_INIT
-#include "junction.h"
+#include "ntfslink.h"
 
 
   #define SWIG_From_long   PyInt_FromLong 
@@ -3710,7 +3710,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_create(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_junction(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   LPTSTR arg1 = (LPTSTR) 0 ;
   LPTSTR arg2 = (LPTSTR) 0 ;
@@ -3723,18 +3723,90 @@ SWIGINTERN PyObject *_wrap_create(PyObject *self, PyObject *args) {
   PyObject *swig_obj[2] ;
   enum CreateJunction_Result result;
   
-  if (!SWIG_Python_UnpackTuple(args,"create",2,2,swig_obj)) SWIG_fail;
+  if (!SWIG_Python_UnpackTuple(args,"junction",2,2,swig_obj)) SWIG_fail;
   res1 = SWIG_AsCharPtrAndSize(swig_obj[0], &buf1, NULL, &alloc1);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "create" "', argument " "1"" of type '" "LPTSTR""'");
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "junction" "', argument " "1"" of type '" "LPTSTR""'");
   }
   arg1 = reinterpret_cast< LPTSTR >(buf1);
   res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "create" "', argument " "2"" of type '" "LPTSTR""'");
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "junction" "', argument " "2"" of type '" "LPTSTR""'");
   }
   arg2 = reinterpret_cast< LPTSTR >(buf2);
   result = (enum CreateJunction_Result)CreateJunction(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_hardlink(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  LPTSTR arg1 = (LPTSTR) 0 ;
+  LPTSTR arg2 = (LPTSTR) 0 ;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject *swig_obj[2] ;
+  enum CreateJunction_Result result;
+  
+  if (!SWIG_Python_UnpackTuple(args,"hardlink",2,2,swig_obj)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(swig_obj[0], &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "hardlink" "', argument " "1"" of type '" "LPTSTR""'");
+  }
+  arg1 = reinterpret_cast< LPTSTR >(buf1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "hardlink" "', argument " "2"" of type '" "LPTSTR""'");
+  }
+  arg2 = reinterpret_cast< LPTSTR >(buf2);
+  result = (enum CreateJunction_Result)CreateHardLink(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_symlink(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  LPTSTR arg1 = (LPTSTR) 0 ;
+  LPTSTR arg2 = (LPTSTR) 0 ;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject *swig_obj[2] ;
+  enum CreateJunction_Result result;
+  
+  if (!SWIG_Python_UnpackTuple(args,"symlink",2,2,swig_obj)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(swig_obj[0], &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "symlink" "', argument " "1"" of type '" "LPTSTR""'");
+  }
+  arg1 = reinterpret_cast< LPTSTR >(buf1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "symlink" "', argument " "2"" of type '" "LPTSTR""'");
+  }
+  arg2 = reinterpret_cast< LPTSTR >(buf2);
+  result = (enum CreateJunction_Result)CreateSymbolicLink(arg1,arg2);
   resultobj = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -3801,24 +3873,36 @@ fail:
 static PyMethodDef SwigMethods[] = {
 	 { (char *)"SWIG_PyInstanceMethod_New", (PyCFunction)SWIG_PyInstanceMethod_New, METH_O, NULL},
 	 { (char *)"is_junction", (PyCFunction)_wrap_is_junction, METH_O, (char *)"\n"
-		"junction.is_junction(string folder)\n"
-		"\n"
+		"Aliases: check, isdir\n"
 		"Returns a bool depending on whether or not the folder specified is a junction.\n"
 		""},
-	 { (char *)"create", _wrap_create, METH_VARARGS, (char *)"\n"
-		"junction.create(folder, target)\n"
-		"\n"
+	 { (char *)"junction", _wrap_junction, METH_VARARGS, (char *)"\n"
 		"Create a new junction.\n"
 		"Possible return values:\n"
 		"	CREATE_SUCCESS - Junction successfully created.\n"
 		"	CREATE_INVALID_TARGET - Invalid file name specified for the target path.\n"
-		"	CREATE_INVALID_JUNCTION - Invalid file name specified for the junction. (the new folder)\n"
+		"	CREATE_INVALID_PATH - Invalid file name specified for the junction. (the new folder)\n"
 		"	CREATE_NOT_SUPPORTED - Junctions are only supported on NTFS volumes.\n"
-		"	CREATE_ERROR_CREATE - Generic error creating the junction.\");\n"
+		"	CREATE_ERROR_CREATE - Generic error creating the junction.\n"
+		"	CREATE_ERROR_SET - Generic error while setting the path in the Reparse point records.\n"
+		""},
+	 { (char *)"hardlink", _wrap_hardlink, METH_VARARGS, (char *)"\n"
+		"Create a new hard link.\n"
+		"Possible return values:\n"
+		"	CREATE_SUCCESS - Junction successfully created.\n"
+		"	CREATE_INVALID_TARGET - Invalid file name specified for the target path.\n"
+		"	CREATE_INVALID_PATH - Invalid file name specified for the hard link. (the new file)\n"
+		"	CREATE_ERROR_CREATE - Generic error creating the hard link.\n"
+		""},
+	 { (char *)"symlink", _wrap_symlink, METH_VARARGS, (char *)"\n"
+		"Create a new symbolic link.\n"
+		"Possible return values:\n"
+		"	CREATE_SUCCESS - Junction successfully created.\n"
+		"	CREATE_INVALID_TARGET - Invalid file name specified for the target path.\n"
+		"	CREATE_INVALID_PATH - Invalid file name specified for the symbolic link. (the new file)\n"
+		"	CREATE_ERROR_CREATE - Generic error creating the symbolic link.\n"
 		""},
 	 { (char *)"unlink", (PyCFunction)_wrap_unlink, METH_O, (char *)"\n"
-		"junction.unlink(folder)\n"
-		"\n"
 		"Delete a junction. (Empty folder remains)\n"
 		"Possible return values:\n"
 		"	DELETE_SUCCESS - Junction successfully deleted.\n"
@@ -3826,8 +3910,7 @@ static PyMethodDef SwigMethods[] = {
 		"	DELETE_ERROR - Error occurred while attempting to delete the junction.\n"
 		""},
 	 { (char *)"delete", (PyCFunction)_wrap_delete, METH_O, (char *)"\n"
-		"junction.delete(folder)\n"
-		"\n"
+		"Aliases: rm, rmdir\n"
 		"Delete a junction and delete the left over folder.\n"
 		"Possible return values:\n"
 		"	DELETE_SUCCESS - Junction successfully deleted.\n"
@@ -4597,7 +4680,7 @@ SWIG_init(void) {
   
   SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_SUCCESS",SWIG_From_int(static_cast< int >(create_success)));
   SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_INVALID_TARGET",SWIG_From_int(static_cast< int >(create_invalid_target)));
-  SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_INVALID_JUNCTION",SWIG_From_int(static_cast< int >(create_invalid_junction)));
+  SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_INVALID_PATH",SWIG_From_int(static_cast< int >(create_invalid_path)));
   SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_NOT_SUPPORTED",SWIG_From_int(static_cast< int >(create_not_supported)));
   SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_ERROR_CREATE",SWIG_From_int(static_cast< int >(create_error_create)));
   SWIG_Python_SetConstant(d, d == md ? public_interface : NULL, "CREATE_ERROR_SET",SWIG_From_int(static_cast< int >(create_error_set)));
