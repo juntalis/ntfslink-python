@@ -5,6 +5,32 @@
 # the SWIG interface file instead.
 
 
+"""
+Simple python module wrapping some of the Win32 API to allow support for
+junctions, symbolic links, and hardlinks. For information on junctions, see the
+MSDN entry on `Junction Points<http://msdn.microsoft.com/en-us/library/bb968829%28VS.85%29.aspx>`_, `Hard Links<http://msdn.microsoft.com/en-us/library/aa365006%28v=VS.85%29.aspx>`_,
+and `Symbolic Links<http://msdn.microsoft.com/en-us/library/aa365680%28v=VS.85%29.aspx>`_
+
+TODO:
+- Find a way to implement the following functions:
+
+    ntfslink.readlink(path)
+      Return a string representing the path to which the symbolic link points.
+
+    ntfslink.islink(path)
+      Return True if path refers to a directory/file entry that is a symbolic
+      link.
+
+- Look into wrapping `Volume Mount Points<http://msdn.microsoft.com/en-us/library/aa365733%28v=VS.85%29.aspx>`_.
+
+- Look into wrapping `Wow64FsRedirection<http://msdn.microsoft.com/en-us/library/aa365744%28v=VS.85%29.aspx>`_.
+
+- Write a python module to direct calls to the correct modules depending on
+  current operating system.
+
+
+"""
+
 
 from sys import version_info
 if version_info >= (2,6,0):
@@ -78,19 +104,7 @@ def _swig_setattr_nondynamic_method(set):
     return set_attr
 
 
-__all__ = ['CREATE_ERROR_CREATE', 'CREATE_ERROR_SET', 'CREATE_INVALID_JUNCTION', 'CREATE_INVALID_TARGET', 'CREATE_NOT_SUPPORTED', 'CREATE_SUCCESS', 'DELETE_ERROR', 'DELETE_INVALID', 'DELETE_SUCCESS', 'junction', 'delete', 'is_junction', 'isdir','rm', 'rmdir', 'unlink', 'symlink', 'hardlink']
-
-def check(folder):
-    """ Alias to junction.is_junction(folder) """
-    return _ntfslink.is_junction(folder)
-
-def rmdir(folder):
-    """ Alias to junction.delete(folder) """
-    return _ntfslink.delete(folder)
-
-def rm(folder):
-    """ Alias to junction.delete(folder) """
-    return _ntfslink.delete(folder)
+__all__ = ['isjunction', 'link', 'symlink', 'junction', 'readjunction', 'rmdir', 'unlink']
 
 
 

@@ -5,6 +5,12 @@
 
 // Maximum reparse point name size
 #define MAX_NAME_LENGTH		1024
+// Shortcut
+#define DIR_ATTR	(FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)
+// The link target is a file.
+#define SYMLINK_FILE 0x0
+// The link target is a directory.
+#define SYMLINK_DIR 0x1
 
 bool IsFolder(LPTSTR pszPath)
 {
@@ -12,6 +18,7 @@ bool IsFolder(LPTSTR pszPath)
 	if(dwAttr & FILE_ATTRIBUTE_DIRECTORY) return true;
 	return false;
 }
+
 
 create_result CheckPaths(LPTSTR newPath, LPTSTR targetPath, LPTSTR outPath, LPTSTR outTarget)
 {
@@ -33,43 +40,41 @@ create_result CheckPaths(LPTSTR newPath, LPTSTR targetPath, LPTSTR outPath, LPTS
 
 HANDLE OpenDirectory(LPCTSTR pszPath, BOOL bReadWrite)
 {
-// Obtain restore privilege in case we don't have it
-  HANDLE hToken;
-  TOKEN_PRIVILEGES tp;
-  ::OpenProcessToken(::GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken);
-  ::LookupPrivilegeValue(NULL,
+	// Obtain restore privilege in case we don't have it
+	HANDLE hToken;
+	TOKEN_PRIVILEGES tp;
+	::OpenProcessToken(::GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken);
+	::LookupPrivilegeValue(NULL,
 						 (bReadWrite ? SE_RESTORE_NAME : SE_BACKUP_NAME),
 						 &tp.Privileges[0].Luid);
-  tp.PrivilegeCount = 1;
-  tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-  ::AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), NULL, NULL);
-  ::CloseHandle(hToken);
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+	::AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), NULL, NULL);
+	::CloseHandle(hToken);
 
-// Open the directory
-  DWORD dwAccess = bReadWrite ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ;
-  HANDLE hDir = ::CreateFile(pszPath, dwAccess, 0, NULL, OPEN_EXISTING,
+	// Open the directory
+	DWORD dwAccess = bReadWrite ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ;
+	HANDLE hDir = ::CreateFile(pszPath, dwAccess, 0, NULL, OPEN_EXISTING,
 					 FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
 
-  return hDir;
+	return hDir;
 }
 
-
-#define DIR_ATTR  (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)
 
 bool IsJunction(LPTSTR pszDir)
 {
 	DWORD dwAttr = ::GetFileAttributes(pszDir);
-	if (dwAttr == -1) return false;  // Not exists
-	if ((dwAttr & DIR_ATTR) != DIR_ATTR) return false;  // Not dir or no reparse point
+	if (dwAttr == -1) return false;	// Not exists
+	if ((dwAttr & DIR_ATTR) != DIR_ATTR) return false;	// Not dir or no reparse point
 
 	HANDLE hDir = OpenDirectory(pszDir, FALSE);
-	if (hDir == INVALID_HANDLE_VALUE) return false;  // Failed to open directory
+	if (hDir == INVALID_HANDLE_VALUE) return false;	// Failed to open directory
 
 	BYTE buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
 	REPARSE_MOUNTPOINT_DATA_BUFFER& ReparseBuffer = (REPARSE_MOUNTPOINT_DATA_BUFFER&)buf;
 	DWORD dwRet;
 	BOOL br = ::DeviceIoControl(hDir, FSCTL_GET_REPARSE_POINT, NULL, 0, &ReparseBuffer,
-									  MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &dwRet, NULL);
+										MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &dwRet, NULL);
 	::CloseHandle(hDir);
 	return br ? (ReparseBuffer.ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) : false;
 }
@@ -103,7 +108,8 @@ delete_result DeleteJunction(LPTSTR pszDir)
 	else return delete_error;
 }
 
-create_result CreateJunction(LPTSTR LinkDirectory, LPTSTR LinkTarget)
+
+create_result CreateJunction(LPTSTR LinkTarget, LPTSTR LinkDirectory)
 {
 	char		reparseBuffer[MAX_PATH*3];
 	TCHAR		volumeName[] = _T("X:\\");
@@ -137,8 +143,8 @@ create_result CreateJunction(LPTSTR LinkDirectory, LPTSTR LinkTarget)
 	// Make the native target name
 	_stprintf( targetNativeFileName, _T("\\??\\%s"), targetFileName );
 	if ( (targetNativeFileName[_tcslen( targetNativeFileName )-1] == _T('\\')) &&
-	   (targetNativeFileName[_tcslen( targetNativeFileName )-2] != _T(':')))
-		  targetNativeFileName[_tcslen( targetNativeFileName )-1] = 0;
+		 (targetNativeFileName[_tcslen( targetNativeFileName )-2] != _T(':')))
+			targetNativeFileName[_tcslen( targetNativeFileName )-1] = 0;
 
 	// Create the link - ignore errors since it might already exist
 	CreateDirectory( LinkDirectory, NULL );
@@ -176,7 +182,8 @@ create_result CreateJunction(LPTSTR LinkDirectory, LPTSTR LinkTarget)
 	return create_success;
 }
 
-create_result CreateHardLink(LPTSTR LinkPath, LPTSTR LinkTarget)
+
+create_result CreateHardLink(LPTSTR LinkTarget, LPTSTR LinkPath)
 {
 	TCHAR		pathFileName[MAX_PATH];
 	TCHAR		targetFileName[MAX_PATH];
@@ -194,12 +201,8 @@ create_result CreateHardLink(LPTSTR LinkPath, LPTSTR LinkTarget)
 	return create_success;
 }
 
-// The link target is a file.
-#define SYMLINK_FILE 0x0
-// The link target is a directory.
-#define SYMLINK_DIR 0x1
 
-create_result CreateSymbolicLink(LPTSTR LinkPath, LPTSTR LinkTarget)
+create_result CreateSymbolicLink(LPTSTR LinkTarget, LPTSTR LinkPath)
 {
 	TCHAR		pathFileName[MAX_PATH];
 	TCHAR		targetFileName[MAX_PATH];
@@ -213,4 +216,40 @@ create_result CreateSymbolicLink(LPTSTR LinkPath, LPTSTR LinkTarget)
 		return create_error_create;
 	
 	return create_success;
+}
+
+
+LPTSTR ReadJunction(LPTSTR szJunction)
+{
+		TCHAR szPath[MAX_PATH];
+
+		if (!IsJunction(szJunction)) {
+			return NULL;
+		}
+
+		// Open for reading only (see OpenDirectory definition above)
+		HANDLE hDir = OpenDirectory(szJunction, FALSE);
+
+		BYTE buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];	// We need a large buffer
+		REPARSE_MOUNTPOINT_DATA_BUFFER& ReparseBuffer = (REPARSE_MOUNTPOINT_DATA_BUFFER&)buf;
+		DWORD dwRet;
+
+		if (DeviceIoControl(hDir, FSCTL_GET_REPARSE_POINT, NULL, 0, &ReparseBuffer,
+										 MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &dwRet, NULL)) {
+			// Success
+			CloseHandle(hDir);
+
+			LPCWSTR pPath = ReparseBuffer.ReparseTarget;
+			if (wcsncmp(pPath, L"\\??\\", 4) == 0) pPath += 4;	// Skip 'non-parsed' prefix
+			#ifndef UNICODE
+			WideCharToMultiByte(CP_ACP, 0, pPath, -1, szPath, MAX_PATH, NULL, NULL);
+			#endif
+		}
+		else {	// Error
+			DWORD dr = ::GetLastError();
+			CloseHandle(hDir);
+			return NULL;
+		}
+		
+		return szPath;
 }

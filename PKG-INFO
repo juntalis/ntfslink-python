@@ -1,0 +1,39 @@
+Metadata-Version: 1.0
+Name: NTFSLink
+Version: 1.1
+Summary: Python-C++ extension wrapping Win32 API to allow support for junctions, hard links, and symbolic links.
+Home-page: https://github.com/Juntalis/ntfslink-python
+Author: Charles Grunwald (Juntalis)
+Author-email: cgrunwald@gmail.com
+License: Simple Public License (SimPL) 2.0 - http://www.opensource.org/licenses/Simple-2.0
+Description:
+    Simple python module wrapping some of the Win32 API to allow support for
+    junctions, symbolic links, and hardlinks. For information on junctions, see the
+    MSDN entry on `Junction Points<http://msdn.microsoft.com/en-us/library/bb968829%28VS.85%29.aspx>`_, `Hard Links<http://msdn.microsoft.com/en-us/library/aa365006%28v=VS.85%29.aspx>`_,
+    and `Symbolic Links<http://msdn.microsoft.com/en-us/library/aa365680%28v=VS.85%29.aspx>`_
+
+    TODO:
+    - Find a way to implement the following functions:
+
+        ntfslink.readlink(path)
+            Return a string representing the path to which the symbolic link points.
+
+        ntfslink.islink(path)
+            Return True if path refers to a directory/file entry that is a symbolic
+            link.
+
+    - Look into wrapping `Volume Mount Points<http://msdn.microsoft.com/en-us/library/aa365733%28v=VS.85%29.aspx>`_.
+
+    - Look into wrapping `Wow64FsRedirection<http://msdn.microsoft.com/en-us/library/aa365744%28v=VS.85%29.aspx>`_.
+
+    - Write a python module to direct calls to the correct modules depending on
+      current operating system.
+
+Platform: Windows
+Classifier: Development Status :: 5 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: Simple Public License (SimPL) 2.0
+Classifier: Programming Language :: Python
+Classifier: Topic :: Database :: Front-Ends
+Classifier: Operating System :: Microsoft :: Windows

@@ -7,7 +7,7 @@ Simple python module wrapping some of the Win32 API to allow support for junctio
 
 If you are looking for more advanced support for symbolic links and hardlinks, check out [Python for Windows Extensions](http://sourceforge.net/projects/pywin32/), which if I remember correct, allows use of Transacted filesystem actions in its win32file module.
 
-_Update_: Renamed the module and added some simple wrappers around CreateSymbolicLink and CreateHardLink, which can now be called through ntfslink.symlink and ntfslink.hardlink respectively. Additionally, junctions are now created with ntfslink.junction.
+_Update_: Added boost and cython wrappers if you prefer to use them.
 
 
 #### What can it do?
@@ -18,14 +18,35 @@ _Update_: Renamed the module and added some simple wrappers around CreateSymboli
 * Create symbolic links to files and directories.
 * Create hard links to files.
 
+### Installation
+
+By default, the distutils script will build ntfslink with a swig wrapper. (If it can't find swig.exe on your system PATH, it will use the pre-generated .cpp file). You can however, tell the setup script to use a cython wrapper by adding 'cython' to the end of your command. See below.
+
+	setup.py build cython
+
+	setup.py install cython
+
+There is also a bjam build file in wrappers/boost to build the extension using a boost wrapper. I haven't figured out a clean way of integrating that into the setup script, but if you'd like to use a boost wrapper, simple open the Jamroot file located at wrapper/boost and change the line:
+
+	BOOST_ROOT = C:/ShellEnv/j-tree/lib/cpp/boost_1_46_1 ;
+
+to wherever your boost folder is, and execute the normal bjam command:
+
+	bjam.exe release
+
 #### Example Usage
 
-	result = ntfslink.junction('temp', 'C:\\Temp')
-	# if C:\Temp exists and everything works out, result would be
-	# ntfslink.CREATE_SUCCESS right now.
-	if ntfslink.is_junction('temp'):
-		print 'Junction was successfully created.'
-		ntfslink.delete('temp')
+	>>> import ntfslink as nt
+	>>> nt.junction('C:\Temp','temp')
+	True
+	>>> nt.isjunction('temp')
+	True
+	>>> nt.readjunction('temp')
+	'C:\\Temp'
+	>>> nt.rmdir('temp')
+	True
+	>>> nt.isjunction('temp')
+	False
 
 Additionally, there's also ntfslink.unlink(folder), which removes the junction entry, but leaves the empty folder behind. There are also a few functions that are just aliases to the main four functions. Just open an interpreter and run help(ntfslink) for more information.
 
@@ -37,7 +58,5 @@ Used [SWIG](http://www.swig.org/) to generate the python wrapper to the code.
 
 #### TODO:
 
-* Add documentation
-* Pick some logical names for the functions to clearly distinguish what does what
 * Look up a way to create IsHardLink and IsSymbolicLink functions
 * Check MSDN to see if any complications arise from deleting symbolic links or hard links like you would normal files.
