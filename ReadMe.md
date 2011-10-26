@@ -7,32 +7,46 @@ Simple python module wrapping some of the Win32 API to allow support for junctio
 
 If you are looking for more advanced support for symbolic links and hardlinks, check out [Python for Windows Extensions](http://sourceforge.net/projects/pywin32/), which if I remember correct, allows use of Transacted filesystem actions in its win32file module.
 
-_Update_: Added boost and cython wrappers if you prefer to use them.
+_Update_: Stopped using wrappers as a crutch and reimplemented the module in C, cutting it down to two files. Old module can be found in the old folder.
 
 
 #### What can it do?
 
-* Create new junctions to existing directories.
-* Deleting existing junctions, referenced by file path.
-* Check whether or not an existing folder is a junction point.
+* Read the target of existing junctions/symbolic links
+* Remove the reparse point record from a symbolic link
+* Delete existing junctions, referenced by file path.
+* Check whether or not an existing folder is a junction point/symbolic link.
 * Create symbolic links to files and directories.
+* Create new junctions to existing directories.
 * Create hard links to files.
 
 ### Installation
 
-By default, the distutils script will build ntfslink with a swig wrapper. (If it can't find swig.exe on your system PATH, it will use the pre-generated .cpp file). You can however, tell the setup script to use a cython wrapper by adding 'cython' to the end of your command. See below.
+Standard module building command.
 
-	setup.py build cython
+**To build in the local directory:**
 
-	setup.py install cython
+	setup.py build
 
-There is also a bjam build file in wrappers/boost to build the extension using a boost wrapper. I haven't figured out a clean way of integrating that into the setup script, but if you'd like to use a boost wrapper, simple open the Jamroot file located at wrapper/boost and change the line:
+**Or to install:**
 
-	BOOST_ROOT = C:/ShellEnv/j-tree/lib/cpp/boost_1_46_1 ;
+	setup.py install
 
-to wherever your boost folder is, and execute the normal bjam command:
+**Old Instructions**
 
-	bjam.exe release
+~~By default, the distutils script will build ntfslink with a swig wrapper. (If it can't find swig.exe on your system PATH, it will use the pre-generated .cpp file). You can however, tell the setup script to use a cython wrapper by adding 'cython' to the end of your command. See below.~~
+
+~~setup.py build cython~~
+
+~~setup.py install cython~~
+
+~~There is also a bjam build file in wrappers/boost to build the extension using a boost wrapper. I haven't figured out a clean way of integrating that into the setup script, but if you'd like to use a boost wrapper, simple open the Jamroot file located at wrapper/boost and change the line:~~
+
+~~BOOST_ROOT = C:/ShellEnv/j-tree/lib/cpp/boost_1_46_1 ;~~
+
+~~to wherever your boost folder is, and execute the normal bjam command:~~
+
+~~bjam.exe release~~
 
 #### Example Usage
 
@@ -41,9 +55,9 @@ to wherever your boost folder is, and execute the normal bjam command:
 	True
 	>>> nt.isjunction('temp')
 	True
-	>>> nt.readjunction('temp')
-	'C:\\Temp'
-	>>> nt.rmdir('temp')
+	>>> nt.readlink('temp')
+	'\\??\\C:\\Temp'
+	>>> nt.unlink('temp')
 	True
 	>>> nt.isjunction('temp')
 	False
@@ -52,11 +66,8 @@ Additionally, there's also ntfslink.unlink(folder), which removes the junction e
 
 #### Credits
 
-Based on original code by [Sysinternals](http://technet.microsoft.com/en-us/sysinternals) in their command line [Junction](http://technet.microsoft.com/en-us/sysinternals/bb896768) tool.
-
-Used [SWIG](http://www.swig.org/) to generate the python wrapper to the code.
+~~Some~~ Alot of the code is made up of bits and pieces modified from the project, "reparselib". The full source can be found at [reparselib](https://github.com/amdf/reparselib ReparseLib's Repository). No license was specified, but all credit goes to the author, [amdf](https://github.com/amdf amdf's Profile). Besides that, a lot of the information on the Win32 API calls made was picked up at
 
 #### TODO:
 
-* Look up a way to create IsHardLink and IsSymbolicLink functions
-* Check MSDN to see if any complications arise from deleting symbolic links or hard links like you would normal files.
+* Get rid of the crap at the beginning of the return from readlink when you're checking a junction.
