@@ -11,7 +11,7 @@ if sys.getwindowsversion()[0] < 6:
 	sys.exit(0)
 
 setup (name = 'ntfslink',
-	version = '1.1',
+	version = '1.2',
 	author = "Charles Grunwald (Juntalis)",
 	author_email = 'cgrunwald@gmail.com',
 	description = """ Simple module wrapping some of the Win32 API to allow support for junctions, hard links, and symbolic links. """,
