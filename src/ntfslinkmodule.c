@@ -13,10 +13,10 @@
 BOOL NormalizeInput(IN char* sInput, OUT LPTSTR* sResult, IN size_t szLength)
 {
 	#ifdef UNICODE
-		sResult = (LPCTSTR)
+		*sResult = (LPTSTR)
 			GlobalAlloc(GPTR, SZWCHAR * (szLength+1));
-		if(sResult == NULL) return FALSE;
-		mbstowcs((LPWSTR*)sResult, sInput, szLength);
+		if(*sResult == NULL) return FALSE;
+		mbstowcs(*(LPWSTR*)sResult, sInput, szLength);
 	#else
 		*sResult = (LPTSTR)sInput;
 	#endif
@@ -27,7 +27,7 @@ BOOL NormalizeInput(IN char* sInput, OUT LPTSTR* sResult, IN size_t szLength)
  *@brief Deallocate previous allocated buffer if necessary.
  *@param [in] sBuffer char* to target
 */
-VOID CleanupStr(IN LPTSTR sInput)
+VOID CleanupStr(IN LPTSTR* sInput)
 {
 	#ifdef UNICODE
 		if(sInput != NULL)
