@@ -7,7 +7,7 @@ Simple python module wrapping some of the Win32 API to allow support for junctio
 
 If you are looking for more advanced support for symbolic links and hardlinks, check out [Python for Windows Extensions](http://sourceforge.net/projects/pywin32/), which if I remember correct, allows use of Transacted filesystem actions in its win32file module.
 
-_Update_: Stopped using wrappers as a crutch and reimplemented the module in C, cutting it down to two files. Old module can be found in the old folder.
+_Update_: Was thinking about writing a cygpath.py tool so I was playing around with cygwin symbolic links. Ended up writing a simple implementation to read/write cygwin symbolic links. (though it doesn't convert the paths) Still, thought it might interest someone so I threw it into the trash folder. Requires cython if you want to build it.
 
 
 #### What can it do?
