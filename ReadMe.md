@@ -5,10 +5,9 @@ Python NTFS Links Module
 
 Simple python module wrapping some of the Win32 API to allow support for junctions. For information on junctions, see the MSDN entry on [Junction Points](http://msdn.microsoft.com/en-us/library/bb968829%28VS.85%29.aspx).
 
-If you are looking for more advanced support for symbolic links and hardlinks, check out [Python for Windows Extensions](http://sourceforge.net/projects/pywin32/), which if I remember correct, allows use of Transacted filesystem actions in its win32file module.
+If you are looking for more advanced support for symbolic links and hardlinks, check out [Python for Windows Extensions](http://sourceforge.net/projects/pywin32/), which if I remember correct, allows use of Transacted filesystem actions in its win32file module. I've added a example implementation of readlink, islink, and realpath using the pywin32 module to the contrib folder. Feel free to use/modify/improve upon it as you see fit. It will also work for junctions if you substitute "MOUNTPOINT" for "SYMBOLIC_LINK" in the readlink function.
 
-_Update_: Was thinking about writing a cygpath.py tool so I was playing around with cygwin symbolic links. Ended up writing a simple implementation to read/write cygwin symbolic links. (though it doesn't convert the paths) Still, thought it might interest someone so I threw it into the trash folder. Requires cython if you want to build it.
-
+Lastly, I was playing around with cygwin symbolic links and wrote a quick(dumb) implementation of readlink and symlink to work with cygwin symbolic links without any external dependency on cygwin. It requires [Cython](http://cython.org/) to build. If you don't have Cython and would like to build it without having to install Cython, let me know, and I'll attach the .c file that cython generates. Note: It does not automatically convert the cygwin path to a Windows path for either functions. It will read/write the links exactly as you put them.
 
 #### What can it do?
 
@@ -66,7 +65,7 @@ Additionally, there's also ntfslink.unlink(folder), which removes the junction e
 
 #### Credits
 
-~~Some~~ Alot of the code is made up of bits and pieces modified from the project, "reparselib". The full source can be found at [reparselib](https://github.com/amdf/reparselib ReparseLib's Repository). No license was specified, but all credit goes to the author, [amdf](https://github.com/amdf amdf's Profile). Besides that, a lot of the information on the Win32 API calls made was picked up at
+~~Some~~ Alot of the code is made up of bits and pieces modified from the project, "reparselib". The full source can be found at [reparselib](https://github.com/amdf/reparselib). No license was specified, but all credit goes to the author, [amdf](https://github.com/amdf). Besides that, a lot of the information on the Win32 API calls made was picked up at
 
 #### TODO:
 
