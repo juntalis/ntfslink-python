@@ -1,0 +1,11 @@
+.idea
+*.pyc
+*.obj
+*.lib
+*.exp
+*.dll
+*.exe
+*.pyd
+build
+trash/*.c
+trash/*.cpp

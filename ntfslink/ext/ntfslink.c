@@ -395,6 +395,7 @@ RESULT_CREATE CreateJunction(IN LPTSTR LinkTarget, IN LPTSTR LinkDirectory)
 	HANDLE		hFile;
 	WCHAR		creationPath[MAX_PATH];
 	DWORD		returnedLength;
+	FILE* logFile;
 	PREPARSE_MOUNTPOINT_DATA_BUFFER reparseInfo = 
 		(PREPARSE_MOUNTPOINT_DATA_BUFFER) reparseBuffer;
 
@@ -430,7 +431,7 @@ RESULT_CREATE CreateJunction(IN LPTSTR LinkTarget, IN LPTSTR LinkDirectory)
 		return RESULT_ERROR_CREATE;
 
 	#ifndef UNICODE
-		mbstowcs (creationPath, (const char *)targetNativeFileName, sizeof(targetNativeFileName)/sizeof(TCHAR));
+		mbstowcs (creationPath, (const char *)targetNativeFileName, _tcslen(targetNativeFileName));
 	#else
 		creationPath = targetNativeFileName;
 	#endif

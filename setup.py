@@ -17,7 +17,7 @@ setup (name = 'ntfslink',
 	description = """ Simple module wrapping some of the Win32 API to allow support for junctions, hard links, and symbolic links. """,
 	ext_modules = [Extension(
 		'ntfslink',
-		['src/ntfslinkmodule.c','src/ntfslink.c'],
+		['ntfslink/ext/ntfslinkmodule.c','ntfslink/ext/ntfslink.c'],
 		define_macros=[('_CRT_SECURE_NO_WARNINGS', None)],
 		libraries=['advapi32'],
 		include_dirs=['src'],
