@@ -8,6 +8,8 @@ def create(source, link_name):
 
 	See: os.symlink
 	"""
+	source = str(source).strip('\0 ')
+	link_name = str(link_name).strip('\0 ')
 	if not path.isdir(source):
 		raise Exception('Junction source does not exist or is not a directory.')
 
@@ -18,25 +20,36 @@ def create(source, link_name):
 	if not CreateDirectory(link_name):
 		raise Exception('Failed to create new directory for target junction.')
 
-	source = TranslatePath(source)
+	# SubstituteName
+	substlink = TranslatePath(source)
 	ObtainRestorePrivilege(True)
 	hFile = CreateFile(link_name, GENERIC_WRITE, FILE_SHARE_READ_WRITE, OPEN_EXISTING, FILE_FLAG_REPARSE_BACKUP)
 	if hFile == HANDLE(INVALID_HANDLE_VALUE):
 		raise InvalidHandleException('Failed to open directory for junction creation.')
 
-	datalen = (len(source) - 1) * sizeof(c_wchar)
-	reparseInfo = ReparsePoint(
-		IO_REPARSE_TAG_MOUNT_POINT,
-		datalen + 12,
-		0,
-		datalen,
-		datalen + sizeof(c_wchar),
-		0,
-		source
-	)
+	# Calculate the lengths of the names.
+	lensubst = len(substlink) * sizeof(c_wchar)
+	lenprint = len(source) * sizeof(c_wchar)
+
+	# Construct our structure. Note: We have enter the fields one by one due tot he fact that we still need
+	# to resize the PathBuffer field.
+	reparseInfo = ReparsePoint()
+	reparseInfo.ReparseTag = IO_REPARSE_TAG_MOUNT_POINT
+
+	# reparseInfo.ReparseDataLength = datalen + 12
+	reparseInfo.Reserved = 0
+	reparseInfo.MountPoint = MountPointBuffer()
+	reparseInfo.MountPoint.SubstituteNameOffset = 0
+	reparseInfo.MountPoint.SubstituteNameLength	= lensubst
+	reparseInfo.MountPoint.PrintNameOffset = lensubst + sizeof(c_wchar) # Ending \0
+	reparseInfo.MountPoint.PrintNameLength = lenprint
+
+	(bufflen, reparseInfo.ReparseDataLength) = CalculateLength(MountPointBuffer, reparseInfo.MountPoint)
+
+	# Assign the PathBuffer, then resize it, etc.
+	reparseInfo.MountPoint.PathBuffer = u'%s\0%s' % (substlink, source)
 	pReparseInfo = pointer(reparseInfo)
-	#noinspection PyTypeChecker
-	reparseInfo._fields_[6] = ('ReparseTarget', datalen)
+	reparseInfo.MountPoint._fields_[4] = ('PathBuffer', bufflen)
 	returnedLength = DWORD(0)
 	result = BOOL(
 		windll.kernel32.DeviceIoControl(
@@ -97,7 +110,11 @@ def read(fpath):
 
 	windll.kernel32.CloseHandle(hFile)
 	if result:
-		target = str(reparseInfo.ReparseTarget)
+		# Unfortunately I cant figure out a way to get the PrintName. The problem is, PathBuffer should currently
+		# contain a c_wchar array that holds SubstituteName\0PrintName\0. Unfortunately, since it automatically
+		# converts it to a unicode string, I've been unable to figure out a way to access the data past the first
+		# terminating \0. So instead, we'll just use the SubstituteName and remove the \??\ from the front.
+		target = str(reparseInfo.MountPoint.PathBuffer)
 		if target[:4] == '\\??\\':
 			target = target[4:]
 		return target
