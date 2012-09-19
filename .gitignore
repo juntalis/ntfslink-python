@@ -9,3 +9,5 @@
 build
 trash/*.c
 trash/*.cpp
+src/other
+contrib

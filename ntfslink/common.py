@@ -1,257 +1,163 @@
 from os import path
-from ctypes import *
-from ctypes.wintypes import *
+from typedecls import *
 
-## Definitions (Constants/Typedefs/Etc)
+## CTypes Function Prototypes
 
-# The variables below deal with some of the more general stuff. (File
-# IO, file access privileges, flags, basic typedefs, etc) There's a few
-# flags dealing with reparse points that I left in this section for naming
-# consistency.
-GENERIC_READ = 0x80000000
-GENERIC_WRITE = 0x40000000
+##########################
+# Kernel32.dll Functions #
+##########################
 
-FILE_SHARE_DELETE = 0x00000004
-FILE_SHARE_READ = 0x00000001
-FILE_SHARE_WRITE = 0x00000002
-FILE_SHARE_READ_WRITE = 0x00000003 # FILE_SHARE_READ | FILE_SHARE_WRITE
+kernel32 = WinDLL('kernel32.dll')
 
-FILE_ATTRIBUTE_DIRECTORY = 16L
-FILE_ATTRIBUTE_REPARSE_POINT = 1024L
-FILE_ATTRIBUTE_REPARSE_DIRECTORY = 1040L # FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT
+CreateFileW = kernel32.CreateFileW
+CreateFileW.restype = HANDLE
+CreateFileW.argtypes = [LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE]
+CreateFileW.__doc__ = \
+""" HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) """
 
-OPEN_EXISTING = 3
+CreateDirectoryW = kernel32.CreateDirectoryW
+CreateDirectoryW.restype = BOOL
+CreateDirectoryW.argtypes = [LPCWSTR, LPSECURITY_ATTRIBUTES]
+CreateDirectoryW.__doc__ = \
+""" BOOL CreateDirectoryW(LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes) """
 
-FILE_FLAG_OPEN_REPARSE_POINT = 2097152
-FILE_FLAG_BACKUP_SEMANTICS = 33554432
-FILE_FLAG_REPARSE_BACKUP = 35651584 # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
+RemoveDirectory = kernel32.RemoveDirectoryW
+RemoveDirectory.restype = BOOL
+RemoveDirectory.argtypes = [LPCWSTR]
+RemoveDirectory.__doc__ = \
+"""
+Self-explanatory.
 
-TOKEN_ADJUST_PRIVILEGES = DWORD(32)
-SE_PRIVILEGE_ENABLED = 2
-SE_RESTORE_NAME = 'SeRestorePrivilege'
-SE_BACKUP_NAME = 'SeBackupPrivilege'
+	BOOL WINAPI RemoveDirectory(
+		__in  LPCTSTR lpPathName
+	);
 
-LPOVERLAPPED = c_void_p
-LPSECURITY_ATTRIBUTES = c_void_p
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa365488(v=vs.85).aspx>`_
+"""
 
-INVALID_HANDLE_VALUE = -1
-MAX_PATH = 260
-NULL = 0
-ANYSIZE_ARRAY = 1
+GetFileAttributes = kernel32.GetFileAttributesW
+GetFileAttributes.restype = DWORD
+GetFileAttributes.argtypes = [LPCWSTR]
+GetFileAttributes.__doc__ = \
+"""
+Used pretty heavily for a number of different tests, but it should be self-explanatory to people who've done
+any Win32 API stuff.
 
-FALSE = BOOL(0)
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa364944(v=vs.85).aspx>`_
+"""
 
-# The following definitions are directly related to dealing with reparse
-# points.
+GetCurrentProcess = kernel32.GetCurrentProcess
+GetCurrentProcess.restype = HANDLE
+GetCurrentProcess.argtypes = []
+GetCurrentProcess.__doc__ = \
+""" Gets a handle to the current process. """
 
-IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003
+CloseHandle = kernel32.CloseHandle
+CloseHandle.restype = BOOL
+CloseHandle.argtypes = [ HANDLE ]
+CloseHandle.__doc__ = \
+""" Closes a previously opened handle.. """
 
-FSCTL_GET_REPARSE_POINT = 589992
-FSCTL_SET_REPARSE_POINT = 589988
-FSCTL_DELETE_REPARSE_POINT = 589996
+DeviceIoControl = kernel32.DeviceIoControl
+DeviceIoControl.restype = BOOL
+DeviceIoControl.argtypes = [HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD, LPOVERLAPPED]
+DeviceIoControl.__doc__ =\
+"""
+Sends a control code directly to a specified device driver, causing the corresponding device to perform the corresponding operation.
 
-REPARSE_MOUNTPOINT_HEADER_SIZE = sizeof(ULONG) + (2 * sizeof(USHORT))
-MAX_NAME_LENGTH = 1024
-MAX_REPARSE_BUFFER = 16 * MAX_NAME_LENGTH
+	BOOL WINAPI DeviceIoControl(
+		_In_         HANDLE hDevice,
+		_In_         DWORD dwIoControlCode,
+		_In_opt_     LPVOID lpInBuffer,
+		_In_         DWORD nInBufferSize,
+		_Out_opt_    LPVOID lpOutBuffer,
+		_In_         DWORD nOutBufferSize,
+		_Out_opt_    LPDWORD lpBytesReturned,
+		_Inout_opt_  LPOVERLAPPED lpOverlapped
+	);
 
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa363216(v=vs.85).aspx>`_
+"""
 
-## Structures/Unions
+##########################
+# AdvApi32.dll Functions #
+##########################
 
-class SymbolicLinkBuffer(Structure):
-	"""
-	CTypes implementation of:
+advapi32 = WinDLL('advapi32.dll')
 
-	struct {
-		USHORT SubstituteNameOffset;
-		USHORT SubstituteNameLength;
-		USHORT PrintNameOffset;
-		USHORT PrintNameLength;
-		ULONG Flags;
-		WCHAR PathBuffer[1];
-	} SymbolicLinkReparseBuffer;
-	"""
+OpenProcessToken = advapi32.OpenProcessToken
+OpenProcessToken.restype = BOOL
+OpenProcessToken.argtypes = [HANDLE, DWORD, PHANDLE]
+OpenProcessToken.__doc__ = \
+"""
+The OpenProcessToken function opens the access token associated with a process.
 
-	#noinspection PyTypeChecker
-	_fields_ = [
-		("SubstituteNameOffset", USHORT),
-		("SubstituteNameLength", USHORT),
-		("PrintNameOffset", USHORT),
-		("PrintNameLength", USHORT),
-		("Flags", ULONG),
-		# Unfortunately, I can't se this to c_wchar * 1 because it will be too small
-		# for our buffer when I call this structure's constructor. Instead, I have to
-		# resize it later in the process. For now, I'll add +4 for the \??\, in addition
-		# to an extra 2 characters for the two sets of ending \0's
-		("PathBuffer", c_wchar * (((MAX_PATH + 1)*2) + 4))
-	]
+	BOOL WINAPI OpenProcessToken(
+		_In_   HANDLE ProcessHandle,
+		_In_   DWORD DesiredAccess,
+		_Out_  PHANDLE TokenHandle
+	);
 
-class MountPointBuffer(Structure):
-	"""
-	CTypes implementation of:
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa379295(v=vs.85).aspx>`_
+"""
 
-	struct {
-		USHORT SubstituteNameOffset;
-		USHORT SubstituteNameLength;
-		USHORT PrintNameOffset;
-		USHORT PrintNameLength;
-		WCHAR PathBuffer[1];
-	} MountPointReparseBuffer;
-	"""
+LookupPrivilegeValue = advapi32.LookupPrivilegeValueW
+LookupPrivilegeValue.restype = BOOL
+LookupPrivilegeValue.argtypes = [ LPCWSTR, LPCWSTR, PLUID ]
+LookupPrivilegeValue.__doc__ = \
+"""
+The LookupPrivilegeValue function retrieves the locally unique identifier (LUID) used on a specified system to locally
+represent the specified privilege name.
 
-	#noinspection PyTypeChecker
-	_fields_ = [
-		("SubstituteNameOffset", USHORT),
-		("SubstituteNameLength", USHORT),
-		("PrintNameOffset", USHORT),
-		("PrintNameLength", USHORT),
-		# See SymbolicLinkBuffer.PathBuffer for our reasoning.
-		("PathBuffer", c_wchar * (((MAX_PATH + 1)*2) + 4))
-	]
+	BOOL WINAPI LookupPrivilegeValue(
+		_In_opt_  LPCTSTR lpSystemName,
+		_In_      LPCTSTR lpName,
+		_Out_     PLUID lpLuid
+	);
 
-class GenericReparseBuffer(Structure):
-	"""
-	CTypes implementation of:
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa379180(v=vs.85).aspx>`_
+"""
 
-	struct {
-		UCHAR  DataBuffer[1];
-	} GenericReparseBuffer;
-	"""
+AdjustTokenPrivileges = advapi32.AdjustTokenPrivileges
+AdjustTokenPrivileges.restype = BOOL
+AdjustTokenPrivileges.argtypes = [ HANDLE, BOOL, PTokenPrivileges, DWORD, PTokenPrivileges, PDWORD ]
+AdjustTokenPrivileges.__doc__ = \
+"""
+The AdjustTokenPrivileges function enables or disables privileges in the specified access token. Enabling or disabling
+privileges in an access token requires TOKEN_ADJUST_PRIVILEGES access.
 
-	#noinspection PyTypeChecker
-	_fields_ = [
+	BOOL WINAPI AdjustTokenPrivileges(
+		_In_       HANDLE TokenHandle,
+		_In_       BOOL DisableAllPrivileges,
+		_In_opt_   PTOKEN_PRIVILEGES NewState,
+		_In_       DWORD BufferLength,
+		_Out_opt_  PTOKEN_PRIVILEGES PreviousState,
+		_Out_opt_  PDWORD ReturnLength
+	);
 
-		("PathBuffer", c_ubyte * (1+MAX_PATH))
-	]
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa375202(v=vs.85).aspx>`_
+"""
 
-class DUMMYUNIONNAME(Union):
-	"""
-	CTypes implementation of:
+GetVolumeInformation = kernel32.GetVolumeInformationW
+GetVolumeInformation.restype = BOOL
+GetVolumeInformation.argtypes = [ LPCWSTR, LPWSTR, DWORD, LPDWORD, LPDWORD, LPDWORD, LPWSTR, DWORD ]
+GetVolumeInformation.__doc__ = \
+"""
+Retrieves information about the file system and volume associated with the specified root directory.
 
-	union {
-		struct {
-			USHORT SubstituteNameOffset;
-			USHORT SubstituteNameLength;
-			USHORT PrintNameOffset;
-			USHORT PrintNameLength;
-			ULONG Flags;
-			WCHAR PathBuffer[1];
-		} SymbolicLinkReparseBuffer;
-		struct {
-			USHORT SubstituteNameOffset;
-			USHORT SubstituteNameLength;
-			USHORT PrintNameOffset;
-			USHORT PrintNameLength;
-			WCHAR PathBuffer[1];
-		} MountPointReparseBuffer;
-		struct {
-			UCHAR  DataBuffer[1];
-		} GenericReparseBuffer;
-	} DUMMYUNIONNAME;
-	"""
+	BOOL WINAPI GetVolumeInformation(
+		_In_opt_   LPCTSTR lpRootPathName,
+		_Out_opt_  LPTSTR lpVolumeNameBuffer,
+		_In_       DWORD nVolumeNameSize,
+		_Out_opt_  LPDWORD lpVolumeSerialNumber,
+		_Out_opt_  LPDWORD lpMaximumComponentLength,
+		_Out_opt_  LPDWORD lpFileSystemFlags,
+		_Out_opt_  LPTSTR lpFileSystemNameBuffer,
+		_In_       DWORD nFileSystemNameSize
+	);
 
-	_fields_ = [("SymbolicLink", SymbolicLinkBuffer),
-				("MountPoint", MountPointBuffer),
-				("Generic", GenericReparseBuffer)]
-
-
-class ReparsePoint(Structure):
-	"""
-	CTypes implementation of:
-
-	typedef struct _REPARSE_DATA_BUFFER {
-		ULONG  ReparseTag;
-		USHORT ReparseDataLength;
-		USHORT Reserved;
-		union {
-			struct {
-				USHORT SubstituteNameOffset;
-				USHORT SubstituteNameLength;
-				USHORT PrintNameOffset;
-				USHORT PrintNameLength;
-				ULONG Flags;
-				WCHAR PathBuffer[1];
-			} SymbolicLinkReparseBuffer;
-			struct {
-				USHORT SubstituteNameOffset;
-				USHORT SubstituteNameLength;
-				USHORT PrintNameOffset;
-				USHORT PrintNameLength;
-				WCHAR PathBuffer[1];
-			} MountPointReparseBuffer;
-			struct {
-				UCHAR  DataBuffer[1];
-			} GenericReparseBuffer;
-		} DUMMYUNIONNAME;
-	} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
-	"""
-
-	_anonymous_ = ("du",)
-	_fields_ = [
-		("ReparseTag", ULONG),
-		("ReparseDataLength", USHORT),
-		("Reserved", USHORT),
-		("du", DUMMYUNIONNAME)
-	]
-
-class LUID(Structure):
-	"""
-	CTypes implementation of:
-
-	typedef struct _LUID {
-	  DWORD LowPart;
-	  LONG  HighPart;
-	} LUID, *PLUID;
-	"""
-
-	_fields_ = [
-		("LowPart", DWORD),
-		("HighPart", LONG),
-	]
-
-class LuidAndAttributes(Structure):
-	"""
-	CTypes implementation of:
-
-	typedef struct _LUID_AND_ATTRIBUTES {
-	  LUID  Luid;
-	  DWORD Attributes;
-	} LUID_AND_ATTRIBUTES, *PLUID_AND_ATTRIBUTES;
-	"""
-
-	_fields_ = [
-		("Luid", LUID),
-		("Attributes", DWORD),
-	]
-
-class TokenPrivileges(Structure):
-	"""
-	CTypes implementation of:
-
-	typedef struct _TOKEN_PRIVILEGES {
-	  DWORD               PrivilegeCount;
-	  LUID_AND_ATTRIBUTES Privileges[ANYSIZE_ARRAY];
-	} TOKEN_PRIVILEGES, *PTOKEN_PRIVILEGES;
-	"""
-
-	#noinspection PyTypeChecker
-	_fields_ = [
-		("PrivilegeCount", DWORD),
-		("Privileges", LuidAndAttributes * ANYSIZE_ARRAY),
-	]
-
-
-## Utility Classes (Exceptions, etc)
-
-class InvalidLinkException(Exception):
-	"""
-	Exception class for when a filepath is specified that is not a symbolic link/junction.
-	"""
-
-class InvalidHandleException(Exception):
-	"""
-	Exception class for when a call to CreateFile returns INVALID_HANDLE (-1).
-	"""
-
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa364993(v=vs.85).aspx>`_
+"""
 
 ## CTypes Function Call Wrappers
 
@@ -273,15 +179,7 @@ def CreateFile(filename, access, sharemode, creation, flags):
 	More information can be found at the function's
 	`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa363858(v=vs.85).aspx>`_.
 	"""
-	return HANDLE(windll.kernel32.CreateFileW(
-		LPWSTR(filename),
-		DWORD(access),
-		DWORD(sharemode),
-		LPSECURITY_ATTRIBUTES(NULL),
-		DWORD(creation),
-		DWORD(flags),
-		HANDLE(NULL)
-	))
+	return CreateFileW(filename, access, sharemode, None, creation, flags, None)
 
 def CreateDirectory(fpath):
 	"""
@@ -300,28 +198,7 @@ def CreateDirectory(fpath):
 	More information can be found at the function's
 	`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa363855(v=vs.85).aspx>`_.
 	"""
-	return windll.kernel32.CreateDirectoryW(LPWSTR(fpath), LPSECURITY_ATTRIBUTES(NULL)) != FALSE
-
-def RemoveDirectory(fpath):
-	"""
-	Self-explanatory. Returns a python bool::
-
-		BOOL WINAPI RemoveDirectory(
-			__in  LPCTSTR lpPathName
-		);
-
-	`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa365488(v=vs.85).aspx>`_
-	"""
-	return windll.kernel32.RemoveDirectoryW(LPWSTR(fpath)) != FALSE
-
-def GetFileAttributes(fpath):
-	"""
-	Used pretty heavily for a number of different tests, but it should be self-explanatory to people who've done
-	any Win32 API stuff.
-
-	`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa364944(v=vs.85).aspx>`_
-	"""
-	return windll.kernel32.GetFileAttributesW(LPWSTR(fpath))
+	return CreateDirectoryW(fpath, None) != FALSE
 
 def IsFolder(fpath):
 	"""
@@ -340,13 +217,10 @@ def IsReparsePoint(fpath):
 def IsReparseDir(fpath):
 	"""
 	Checks whether a given path is a reparse point and a folder by using the GetFileAttributes call and testing the
-	result against the FILE_ATTRIBUTE_REPARSE_DIRECTORY flag. (which is just::
-
+	result against the FILE_ATTRIBUTE_REPARSE_DIRECTORY flag. (which is just:
 		FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT
-
 	)
 	"""
-
 	return True if GetFileAttributes(fpath) & FILE_ATTRIBUTE_REPARSE_DIRECTORY else False
 
 def TranslatePath(fpath):
@@ -355,7 +229,6 @@ def TranslatePath(fpath):
 
 		>>> TranslatePath('test.txt')
 		\??\C:\Temp\test.txt
-
 	"""
 	fpath = path.abspath(fpath)
 	if fpath[len(fpath)-1] == '\\' and fpath[len(fpath)-2] == ':':
@@ -369,19 +242,37 @@ def ObtainRestorePrivilege(readwrite = False):
 	"""
 	hToken = HANDLE()
 	tp = TokenPrivileges()
-	hProcess = HANDLE(windll.kernel32.GetCurrentProcess())
+	hProcess = GetCurrentProcess()
 	lpName = SE_RESTORE_NAME if readwrite else SE_BACKUP_NAME
-	if not windll.advapi32.OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, byref(hToken)) != FALSE:
+	if OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, byref(hToken)) == FALSE:
 		raise Exception('Could not open current process security token.')
-	if not windll.advapi32.LookupPrivilegeValueW(LPWSTR(NULL), LPWSTR(lpName), byref(tp.Privileges[0].Luid)) != FALSE:
-		windll.kernel32.CloseHandle(hToken)
+	if LookupPrivilegeValue(None, lpName, byref(tp.Privileges[0].Luid)) == FALSE:
+		CloseHandle(hToken)
 		raise Exception('Could not look up %s privilege.' % lpName)
 	tp.PrivilegeCount = 1
 	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
-	if not windll.advapi32.AdjustTokenPrivileges(hToken, FALSE, byref(tp), DWORD(sizeof(TokenPrivileges)), None, None) != FALSE:
-		windll.kernel32.CloseHandle(hToken)
+	if AdjustTokenPrivileges(hToken, FALSE, byref(tp), sizeof(TokenPrivileges), None, None) == FALSE:
+		CloseHandle(hToken)
 		raise Exception('Could not adjust current process\'s security privileges.')
-	windll.kernel32.CloseHandle(hToken)
+	CloseHandle(hToken)
+
+def _OpenFileForIO(filepath, generic, share, backup):
+	flag = FILE_FLAG_OPEN_REPARSE_POINT
+	if backup:
+		ObtainRestorePrivilege()
+		flag = FILE_FLAG_REPARSE_BACKUP
+	hFile = CreateFile(filepath, generic, share, OPEN_EXISTING, flag)
+	if hFile == HANDLE(INVALID_HANDLE_VALUE):
+		raise InvalidHandleException('Failed to open path: %s' % filepath)
+	return hFile
+
+def OpenFileForRead(filepath, backup = False):
+	""" Opens a file for reading. """
+	return _OpenFileForIO(filepath, GENERIC_READ, FILE_SHARE_READ, backup)
+
+def OpenFileForWrite(filepath, backup = False):
+	""" Opens a file for writing/deleting. """
+	return _OpenFileForIO(filepath, GENERIC_WRITE, FILE_SHARE_ALL, backup)
 
 def CalculateLength(bufferType, buff):
 	"""
@@ -389,5 +280,5 @@ def CalculateLength(bufferType, buff):
 
 	It returns a tuple containing (PathBufferLength, ReparseDataLength).
 	"""
-	bufflen = buff.PrintNameOffset + buff.PrintNameLength + sizeof(c_wchar) # Ending \0
+	bufflen = buff.PrintNameOffset + buff.PrintNameLength + SZWCHAR # Ending \0
 	return bufflen, bufferType.PathBuffer.offset + bufflen
