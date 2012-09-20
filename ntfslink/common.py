@@ -1,6 +1,12 @@
 from os import path
 from typedecls import *
 
+# Some common configuration stuff that will be changed as the module auto-detects
+# the current machine's capabilities.
+has_hardlink_support = True
+#supports_mountpoints = True
+
+
 ## CTypes Function Prototypes
 
 ##########################
@@ -78,6 +84,36 @@ Sends a control code directly to a specified device driver, causing the correspo
 
 `MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa363216(v=vs.85).aspx>`_
 """
+
+GetSystemDirectoryW = kernel32.GetSystemDirectoryW
+GetSystemDirectoryW.restype = UINT
+GetSystemDirectoryW.argtypes = [LPWSTR, UINT]
+GetSystemDirectoryW.__doc__ =\
+"""
+Retrieves the path of the system directory. The system directory contains system files such as dynamic-link libraries and drivers.
+
+	UINT WINAPI GetSystemDirectory(
+		_Out_  LPTSTR lpBuffer,
+		_In_   UINT uSize
+	);
+
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/ms724373(v=vs.85).aspx>`_
+"""
+
+GetVolumeInformationW = kernel32.GetVolumeInformationW
+GetVolumeInformationW.restype = BOOL
+GetVolumeInformationW.argtypes = [LPCWSTR, LPWSTR, DWORD, LPDWORD, LPDWORD, LPDWORD, LPWSTR, DWORD]
+GetVolumeInformationW.__doc__ = \
+"""BOOL GetVolumeInformationW(LPCWSTR lpRootPathName, LPWSTR lpVolumeNameBuffer, DWORD nVolumeNameSize, LPDWORD lpVolumeSerialNumber, LPDWORD lpMaximumComponentLength, LPDWORD lpFileSystemFlags, LPWSTR lpFileSystemNameBuffer, DWORD nFileSystemNameSize)"""
+
+try:
+	CreateHardLinkW = kernel32.CreateHardLinkW
+	CreateHardLinkW.restype = BOOLEAN
+	CreateHardLinkW.argtypes = [LPWSTR, LPWSTR, LPSECURITY_ATTRIBUTES]
+	CreateHardLinkW.__doc__ = \
+	""" BOOLEAN CreateHardLinkW(LPWSTR lpFileName, LPWSTR lpExistingFileName, LPSECURITY_ATTRIBUTES lpSecurityAttributes) """
+except:
+	has_hardlink_support = False
 
 ##########################
 # AdvApi32.dll Functions #
@@ -199,6 +235,13 @@ def CreateDirectory(fpath):
 	`MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa363855(v=vs.85).aspx>`_.
 	"""
 	return CreateDirectoryW(fpath, None) != FALSE
+
+def GetSystemDirectory():
+	""" Just a wrapper around the C API to provide a parameter-less function."""
+	buf = create_unicode_buffer(MAX_PATH+1)
+	if GetSystemDirectoryW(buf, MAX_PATH) == 0: raise WindowsError()
+	return buf.value
+
 
 def IsFolder(fpath):
 	"""

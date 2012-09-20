@@ -3,23 +3,21 @@ Python NTFS Links Module
 
 #### What is it?
 
-Simple python module wrapping some of the Win32 API to allow support for junctions. For information on junctions, see the MSDN entry on [Junction Points](http://msdn.microsoft.com/en-us/library/bb968829%28VS.85%29.aspx).
+A ctypes based Python module for manipulating reparse points (junctions/symbolic links/etc) and hard links on the Windows version of Python. Originally this was written to be a C-extension, but ctypes appears to be the more portable solution. At the moment, this project is still a work in progress, and is being rewritten from the ground up to utilize on ctypes. It currently supports the manipulation of junction points, and the ability to check for support of symbolic links.
 
-If you are looking for more advanced support for symbolic links and hardlinks, check out [Python for Windows Extensions](http://sourceforge.net/projects/pywin32/), which if I remember correct, allows use of Transacted filesystem actions in its win32file module. I've added a example implementation of readlink, islink, and realpath using the pywin32 module to the contrib folder. Feel free to use/modify/improve upon it as you see fit. It will also work for junctions if you substitute "MOUNTPOINT" for "SYMBOLIC_LINK" in the readlink function.
+While symbolic links are officially only supported on Windows Vista and higher, Windows XP users can also utilize them by installing a custom driver:
 
-Lastly, I was playing around with cygwin symbolic links and wrote a quick(dumb) implementation of readlink and symlink to work with cygwin symbolic links without any external dependency on cygwin. It requires [Cython](http://cython.org/) to build. If you don't have Cython and would like to build it without having to install Cython, let me know, and I'll attach the .c file that cython generates. Note: It does not automatically convert the cygwin path to a Windows path for either functions. It will read/write the links exactly as you put them.
+* [Author's Homepage](http://homepage1.nifty.com/emk/)
+* [Source Code Download](http://homepage1.nifty.com/emk/symlink-1.06-src.zip)
+* [Download (32-bit)](http://homepage1.nifty.com/emk/symlink-1.06-x86.cab)
+* [Download (64-bit)](http://homepage1.nifty.com/emk/symlink-1.06-x64.zip)
+* [English Information](http://schinagl.priv.at/nt/hardlinkshellext/hardlinkshellext.html#symboliclinksforwindowsxp)
 
-#### What can it do?
-
-* Read the target of existing junctions/symbolic links
-* Remove the reparse point record from a symbolic link
-* Delete existing junctions, referenced by file path.
-* Check whether or not an existing folder is a junction point/symbolic link.
-* Create symbolic links to files and directories.
-* Create new junctions to existing directories.
-* Create hard links to files.
+I have nothing to do with that project, but I did go ahead and logic for checking for it in the functions dealing with symbolic link support. When I do finally get around the implementing the symbolic link functions, they will be fully accessible for any Windows XP user with that driver installed.
 
 ### Installation
+
+**Ignore below. The setup doesn't work at the moment, as I've begun rewriting this project from scratch. If you need some functionality already implemented, feel free to just grab what you need from the code.**
 
 Standard module building command.
 
@@ -31,42 +29,26 @@ Standard module building command.
 
 	setup.py install
 
-**Old Instructions**
-
-~~By default, the distutils script will build ntfslink with a swig wrapper. (If it can't find swig.exe on your system PATH, it will use the pre-generated .cpp file). You can however, tell the setup script to use a cython wrapper by adding 'cython' to the end of your command. See below.~~
-
-~~setup.py build cython~~
-
-~~setup.py install cython~~
-
-~~There is also a bjam build file in wrappers/boost to build the extension using a boost wrapper. I haven't figured out a clean way of integrating that into the setup script, but if you'd like to use a boost wrapper, simple open the Jamroot file located at wrapper/boost and change the line:~~
-
-~~BOOST_ROOT = C:/ShellEnv/j-tree/lib/cpp/boost_1_46_1 ;~~
-
-~~to wherever your boost folder is, and execute the normal bjam command:~~
-
-~~bjam.exe release~~
-
-#### Example Usage
-
-	>>> import ntfslink as nt
-	>>> nt.junction('C:\Temp','temp')
-	True
-	>>> nt.isjunction('temp')
-	True
-	>>> nt.readlink('temp')
-	'\\??\\C:\\Temp'
-	>>> nt.unlink('temp')
-	True
-	>>> nt.isjunction('temp')
-	False
-
-Additionally, there's also ntfslink.unlink(folder), which removes the junction entry, but leaves the empty folder behind. There are also a few functions that are just aliases to the main four functions. Just open an interpreter and run help(ntfslink) for more information.
-
 #### Credits
 
-~~Some~~ Alot of the code is made up of bits and pieces modified from the project, "reparselib". The full source can be found at [reparselib](https://github.com/amdf/reparselib). No license was specified, but all credit goes to the author, [amdf](https://github.com/amdf). Besides that, a lot of the information on the Win32 API calls made was picked up at
+Much of the code was derived by reimplementing pieces of the reparselib, who's full source code can be found at [reparselib](https://github.com/amdf/reparselib).
+
+Additionally, thanks goes out to the following Stack Overflow users for explaining a few concepts/methods to me:
+* [Using a struct as a function argument with the python ctypes module](http://stackoverflow.com/questions/8744246/using-a-struct-as-a-function-argument-with-the-python-ctypes-module)
+	* [Janne Karila](http://stackoverflow.com/users/222914/janne-karila)
+* [Programmatically finding the target of a Windows Hard link](http://stackoverflow.com/questions/10260676/programmatically-finding-the-target-of-a-windows-hard-link)
+	* [Raymond Chen](http://stackoverflow.com/users/902497/raymond-chen)
+ 	* [Deanna](http://stackoverflow.com/users/588306/deanna)
+ 	* [Jay](http://stackoverflow.com/users/1510085/jay)
 
 #### TODO:
 
-* Get rid of the crap at the beginning of the return from readlink when you're checking a junction.
+* Symbolic Links
+* Hard Links
+* Cygwin Symbolic Links
+* Custom Reparse Points
+* Look into mount points
+* Documentation
+* Tests
+* Sleep
+* Setup Script
