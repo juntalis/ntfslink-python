@@ -1,5 +1,5 @@
 """
-ctypes_shim.py
+ctypes64.py
 
 Just a shim to import ctypes with some corrections. (From ctypesgen)
 """

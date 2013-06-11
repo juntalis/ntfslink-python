@@ -9,5 +9,6 @@
 build
 trash/*.c
 trash/*.cpp
-src/other
+ntfslink/other
 contrib
+.vip

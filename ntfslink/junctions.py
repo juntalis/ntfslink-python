@@ -1,6 +1,41 @@
-from common import *
+# encoding: utf-8
+"""
+junctions.py
+Module for dealing with junction points.
+
+This program is free software. It comes without any warranty, to
+the extent permitted by applicable law. You can redistribute it
+and/or modify it under the terms of the Do What The Fuck You Want
+To Public License, Version 2, as published by Sam Hocevar. See
+http://sam.zoy.org/wtfpl/COPYING for more details.
+"""
+from .common import *
 
 __all__ = ['create', 'check', 'read', 'unlink']
+
+def _prefill(reparseInfo, source, substlink, link_name, isabs):
+	""" For create """
+	reparseInfo.ReparseTag = IO_REPARSE_TAG_MOUNT_POINT
+
+	# Calculate the lengths of the names.
+	lensubst = len(substlink) * SZWCHAR
+	lenprint = len(source) * SZWCHAR
+
+	# reparseInfo.ReparseDataLength = datalen + 12
+	reparseInfo.Reserved = 0
+	reparseInfo.MountPoint = MountPointBuffer()
+	reparseInfo.MountPoint.SubstituteNameOffset = 0
+	reparseInfo.MountPoint.SubstituteNameLength = lensubst
+	reparseInfo.MountPoint.PrintNameOffset = lensubst + SZWCHAR # Ending \0
+	reparseInfo.MountPoint.PrintNameLength = lenprint
+
+	(bufflen, reparseInfo.ReparseDataLength) = CalculateLength(MountPointBuffer, reparseInfo.MountPoint)
+
+	# Assign the PathBuffer, then resize it, etc.
+	reparseInfo.MountPoint.PathBuffer = u'%s\0%s' % (substlink, source)
+	pReparseInfo = pointer(reparseInfo)
+	reparseInfo.MountPoint._fields_[4] = ('PathBuffer', bufflen)
+	return pReparseInfo
 
 def create(source, link_name):
 	"""
@@ -8,8 +43,8 @@ def create(source, link_name):
 
 	See: os.symlink
 	"""
-	source = str(source).strip('\0 ')
-	link_name = str(link_name).strip('\0 ')
+	source = str_cleanup(source)
+	link_name = str_cleanup(link_name)
 	if not path.isdir(source):
 		raise Exception('Junction source does not exist or is not a directory.')
 
@@ -20,41 +55,7 @@ def create(source, link_name):
 	if not CreateDirectory(link_name):
 		raise Exception('Failed to create new directory for target junction.')
 
-	# SubstituteName
-	substlink = TranslatePath(source)
-	hFile = OpenFileForWrite(link_name, True)
-
-	# Calculate the lengths of the names.
-	lensubst = len(substlink) * SZWCHAR
-	lenprint = len(source) * SZWCHAR
-
-	# Construct our structure. Note: We have enter the fields one by one due tot he fact that we still need
-	# to resize the PathBuffer field.
-	reparseInfo = ReparsePoint()
-	reparseInfo.ReparseTag = IO_REPARSE_TAG_MOUNT_POINT
-
-	# reparseInfo.ReparseDataLength = datalen + 12
-	reparseInfo.Reserved = 0
-	reparseInfo.MountPoint = MountPointBuffer()
-	reparseInfo.MountPoint.SubstituteNameOffset = 0
-	reparseInfo.MountPoint.SubstituteNameLength	= lensubst
-	reparseInfo.MountPoint.PrintNameOffset = lensubst + SZWCHAR # Ending \0
-	reparseInfo.MountPoint.PrintNameLength = lenprint
-
-	(bufflen, reparseInfo.ReparseDataLength) = CalculateLength(MountPointBuffer, reparseInfo.MountPoint)
-
-	# Assign the PathBuffer, then resize it, etc.
-	reparseInfo.MountPoint.PathBuffer = u'%s\0%s' % (substlink, source)
-	pReparseInfo = pointer(reparseInfo)
-	reparseInfo.MountPoint._fields_[4] = ('PathBuffer', bufflen)
-	returnedLength = DWORD(0)
-	result = DeviceIoControl(
-		hFile, FSCTL_SET_REPARSE_POINT, pReparseInfo,
-		reparseInfo.ReparseDataLength + REPARSE_MOUNTPOINT_HEADER_SIZE,
-		None, 0, byref(returnedLength), None
-	) != FALSE
-
-	CloseHandle(hFile)
+	result = create_reparse_point(source, link_name, _prefill)
 	if not result: RemoveDirectory(link_name)
 	return result
 
@@ -72,20 +73,8 @@ def read(fpath):
 
 	See: os.readlink
 	"""
-	if not check(fpath):
-		raise InvalidLinkException("%s is not a junction." % fpath)
-
-	hFile = OpenFileForRead(fpath, True)
-
-	dwRet = DWORD()
-	reparseInfo = ReparsePoint()
-	result = DeviceIoControl(
-		hFile, FSCTL_GET_REPARSE_POINT, None, 0L,
-		byref(reparseInfo), MAX_REPARSE_BUFFER, byref(dwRet), None
-	) != FALSE
-
-	CloseHandle(hFile)
-	if result:
+	reparseInfo = get_buffer(fpath, ReparsePoint, check)
+	if reparseInfo is not None:
 		# Unfortunately I cant figure out a way to get the PrintName. The problem is, PathBuffer should currently
 		# contain a c_wchar array that holds SubstituteName\0PrintName\0. Unfortunately, since it automatically
 		# converts it to a unicode string, I've been unable to figure out a way to access the data past the first
@@ -94,7 +83,6 @@ def read(fpath):
 		if target[:4] == '\\??\\':
 			target = target[4:]
 		return target
-
 	return None
 
 
@@ -104,29 +92,7 @@ def unlink(fpath):
 
 	See: os.rmdir
 	"""
-	if not check(fpath):
-		raise InvalidLinkException("%s is not a junction." % fpath)
-
-	hFile = OpenFileForWrite(fpath, True)
-	dwRet = DWORD()
-
-	# Try to delete it first without the reparse GUID
-	reparseInfo = ReparsePoint()
-	reparseInfo.ReparseTag = IO_REPARSE_TAG_MOUNT_POINT
-	result = DeviceIoControl(
-		hFile,
-		FSCTL_DELETE_REPARSE_POINT,
-		byref(reparseInfo),
-		REPARSE_MOUNTPOINT_HEADER_SIZE,
-		None, 0L, byref(dwRet), None
-	) != FALSE
-
-	if not result:
-		# If the first try fails, we'll set the GUID and try again
-		# TODO: Reimplement some of these to use the GUID class.
-		raise WinError()
-
-	CloseHandle(hFile)
+	result, dwRet = delete_reparse_point(fpath, IO_REPARSE_TAG_MOUNT_POINT, check)
 	if result: RemoveDirectory(fpath)
 	return result, dwRet
 

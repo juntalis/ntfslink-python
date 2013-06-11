@@ -1,4 +1,15 @@
-#!/usr/bin/env python
+# encoding: utf-8
+"""
+supports.py
+Module for testing the capabilities of an individual hard drive or of the current OS.
+
+This program is free software. It comes without any warranty, to
+the extent permitted by applicable law. You can redistribute it
+and/or modify it under the terms of the Do What The Fuck You Want
+To Public License, Version 2, as published by Sam Hocevar. See
+http://sam.zoy.org/wtfpl/COPYING for more details.
+"""
+import sys
 from common import *
 
 # The Windows XP Driver can be found at: http://homepage1.nifty.com/emk/
@@ -10,7 +21,7 @@ _WINXP_DRIVER_FILE = 'symlink.sys'
 def supports_hardlinks():
 	""" Check whether the current system supports hard links. """
 	# TODO: Implement a real test of this.
-	return has_hardlink_support
+	return CreateHardLinkW is not None
 
 def supports_symlinks():
 	""" Checks whether or not the current system supports symbolic links. """
@@ -29,7 +40,7 @@ def path_supports_symlinks(filepath):
 	if not supports_symlinks(): return False
 	drive = path.splitdrive(path.abspath(filepath))[0] + '\\'
 	fs = create_unicode_buffer(MAX_PATH+1)
-	if GetVolumeInformationW(drive, None, 0, None, None, None, fs, MAX_PATH+1) == FALSE:
+	if GetVolumeInformation(drive, None, 0, None, None, None, fs, MAX_PATH+1) == FALSE:
 		raise WindowsError()
 	return fs.value.strip() == 'NTFS'
 

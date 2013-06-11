@@ -1,4 +1,4 @@
 import os
-os.chdir('ntfslink')
-execfile('junctions.py')
-os.chdir('..')
+from ntfslink import hardlinks
+
+hardlinks.example(os.path.abspath(__file__))
