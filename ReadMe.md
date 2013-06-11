@@ -3,7 +3,7 @@ Python NTFS Links Module
 
 #### What is it?
 
-A ctypes based Python module for manipulating reparse points (junctions/symbolic links/etc) and hard links on the Windows version of Python. Originally this was written to be a C-extension, but ctypes appears to be the more portable solution. At the moment, this project is still a work in progress, and is being rewritten from the ground up to utilize on ctypes. It currently supports the manipulation of junction points, and the ability to check for support of symbolic links.
+A ctypes based Python module for manipulating reparse points (junctions/symbolic links/etc) and hard links on the Windows version of Python. Originally this was written to be a C-extension, but ctypes appears to be the more portable solution. At the moment, this project is still a work in progress, and is being rewritten from the ground up to utilize on ctypes. It currently supports the manipulation of junction points, symbolic links, and the ability to check for support of symbolic links.
 
 While symbolic links are officially only supported on Windows Vista and higher, Windows XP users can also utilize them by installing a custom driver:
 
@@ -13,7 +13,7 @@ While symbolic links are officially only supported on Windows Vista and higher, 
 * [Download (64-bit)](http://homepage1.nifty.com/emk/symlink-1.06-x64.zip)
 * [English Information](http://schinagl.priv.at/nt/hardlinkshellext/hardlinkshellext.html#symboliclinksforwindowsxp)
 
-I have nothing to do with that project, but I did go ahead and logic for checking for it in the functions dealing with symbolic link support. When I do finally get around the implementing the symbolic link functions, they will be fully accessible for any Windows XP user with that driver installed.
+I have nothing to do with that project, but I did go ahead and add logic for checking for it in the functions dealing with symbolic link support. 
 
 ### Installation
 
@@ -43,12 +43,4 @@ Additionally, thanks goes out to the following Stack Overflow users for explaini
 
 #### TODO:
 
-* Symbolic Links
-* Hard Links
-* Cygwin Symbolic Links
-* Custom Reparse Points
-* Look into mount points
-* Documentation
-* Tests
-* Sleep
-* Setup Script
+See the [project issues](https://github.com/Juntalis/ntfslink-python/issues?state=open).
