@@ -17,6 +17,21 @@ from internals import *
 class InvalidLinkException(Exception):
 	""" Exception class for when a filepath is specified that is not a symbolic link/junction. """
 
+
+class Handle(HANDLE):
+	""" Wrapper around handle"""
+
+	@staticmethod
+	def open(filepath):
+		fpath = str_cleanup(filepath)
+		return cast(OpenFileForAll(fpath, os.path.isdir(fpath)), Handle)
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		CloseHandle(self)
+
 class PassThru(object):
 	""" A class created for the purpose of passing function calls through to the underlying module. """
 

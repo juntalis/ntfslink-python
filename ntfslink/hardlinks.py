@@ -13,16 +13,29 @@ from common import *
 
 __all__ = ['example']
 
+def timeval(fi, attr):
+	print '  %s:' % attr
+	val = getattr(fi, attr)
+	print '    dwLowDateTime      => 0x%X' % val.dwLowDateTime
+	print '    dwHighDateTime     => 0x%X' % val.dwHighDateTime
+
 def example(filepath):
-	inbuf = NTFS_FILE_RECORD_INPUT_BUFFER()
-	inbuf.FileReferenceNumber = 1
-	outbuf = NTFS_FILE_RECORD_OUTPUT_BUFFER()
-	result, dwRet = deviceioctl(filepath,
-		FSCTL_GET_NTFS_FILE_RECORD,
-		byref(inbuf),
-		sizeof(NTFS_FILE_RECORD_INPUT_BUFFER),
-		byref(outbuf),
-		sizeof(NTFS_FILE_RECORD_OUTPUT_BUFFER)
-	)
-	print outbuf.raw
-	if not result: raise WinError()
+	fileInfo = None
+	with Handle.open(filepath) as hFile:
+		fileInfo = BY_HANDLE_FILE_INFORMATION()
+		result = GetFileInformationByHandle(hFile, byref(fileInfo)) != FALSE
+		if not result:
+			raise WinError()
+
+	print filepath
+	print 'File Information'
+	print '  dwFileAttributes     => 0x%X' % fileInfo.dwFileAttributes
+	timeval(fileInfo, 'ftCreationTime')
+	timeval(fileInfo, 'ftLastAccessTime')
+	timeval(fileInfo, 'ftLastWriteTime')
+	print '  dwVolumeSerialNumber => 0x%X' % fileInfo.dwVolumeSerialNumber
+	print '  nFileSizeHigh        => 0x%X' % fileInfo.nFileSizeHigh
+	print '  nFileSizeLow         => 0x%X' % fileInfo.nFileSizeLow
+	print '  nNumberOfLinks       => 0x%X' % fileInfo.nNumberOfLinks
+	print '  nFileIndexHigh       => 0x%X' % fileInfo.nFileIndexHigh
+	print '  nFileIndexLow        => 0x%X' % fileInfo.nFileIndexLow

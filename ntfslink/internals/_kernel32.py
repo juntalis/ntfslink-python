@@ -129,6 +129,7 @@ class BY_HANDLE_FILE_INFORMATION(Structure):
 		("nFileIndexLow", DWORD)
 	]
 
+LPBY_HANDLE_FILE_INFORMATION = POINTER(BY_HANDLE_FILE_INFORMATION)
 
 ## Functions exported from kernel32.dll
 CreateFileW = kernel32.CreateFileW
@@ -235,6 +236,21 @@ Retrieves information about the file system and volume associated with the speci
 	);
 
 `MSDN Documentation <http://msdn.microsoft.com/en-us/library/windows/desktop/aa364993(v=vs.85).aspx>`_
+"""
+
+GetFileInformationByHandle = kernel32.GetFileInformationByHandle
+GetFileInformationByHandle.restype = BOOL
+GetFileInformationByHandle.argtypes = [ HANDLE, LPBY_HANDLE_FILE_INFORMATION ]
+GetFileInformationByHandle.__doc__ = \
+"""
+Retrieves file information for the specified file.
+
+	BOOL WINAPI GetFileInformationByHandle(
+		_In_   HANDLE hFile,
+		_Out_  LPBY_HANDLE_FILE_INFORMATION lpFileInformation
+	);
+
+`MSDN Documentation <http://msdn.microsoft.com/en-us/library/aa364952%28v=vs.85%29.aspx>`_
 """
 
 try:
