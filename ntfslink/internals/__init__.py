@@ -88,16 +88,14 @@ def OpenFileForAll(filepath, backup = False):
 	""" Opens a file for writing/deleting. """
 	return _OpenFileForIO(filepath, GENERIC_WRITE, FILE_SHARE_ALL, backup)
 
-def CalculateLength(bufferType, buff):
+def CalculateLength(bufferType, pathBuffer):
 	"""
 	Used internally to find the ReparseDataLength and the size of the PathBuffer to allocate.
 
 	It returns a tuple containing (PathBufferLength, ReparseDataLength).
 	"""
-	offset = 0
-	if buff.PrintNameOffset == 0:
-		offset = buff.SubstituteNameLength
-	else:
-		offset = buff.PrintNameOffset + SZWCHAR
-	bufflen = buff.PrintNameLength + offset # Ending \0
-	return bufflen, bufferType.PathBuffer.offset + bufflen
+	offset = pathBuffer.SubstituteNameLength \
+			 if pathBuffer.PrintNameOffset == 0 else \
+			 pathBuffer.PrintNameOffset + SZWCHAR
+	pathBufLen = pathBuffer.PrintNameLength + offset # Ending \0
+	return pathBufLen, bufferType.PathBuffer.offset + pathBufLen

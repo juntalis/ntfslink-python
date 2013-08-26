@@ -89,40 +89,33 @@ def broken_create(source, link_name):
 		RemoveDirectory(link_name)
 	return result
 
-def check(fpath):
+def check(filepath):
 	"""
-	Checks if fpath is a symbolic link.
+	Checks if filepath is a symbolic link.
 
 	See: os.path.islink
 	"""
-	return IsReparsePoint(fpath)
+	return IsReparsePoint(filepath)
 
-def read(fpath):
+def read(filepath):
 	"""
-	Read the target of the symbolic link at fpath.
+	Read the target of the symbolic link at filepath.
 
 	See: os.readlink
 	"""
-	reparseInfo = get_buffer(fpath, ReparsePoint, check)
+	reparseInfo = get_buffer(filepath, ReparsePoint, check)
 	if reparseInfo is not None:
-		# Unfortunately I cant figure out a way to get the PrintName. The problem is, PathBuffer should currently
-		# contain a c_wchar array that holds SubstituteName\0PrintName\0. Unfortunately, since it automatically
-		# converts it to a unicode string, I've been unable to figure out a way to access the data past the first
-		# terminating \0. So instead, we'll just use the SubstituteName and remove the \??\ from the front.
-		slink = reparseInfo.SymbolicLink
-		target = str(slink.PathBuffer)[slink.PrintNameOffset:slink.PrintNameLength]
-		if target[:4] == '\\??\\':
-			target = target[4:]
-		return target
+		symLink = reparseInfo.SymbolicLink
+		return slink.PathBuffer[symLink.PrintNameOffset/SZWCHAR:symLink.PrintNameLength/SZWCHAR]
 	return None
 
-def unlink(fpath):
+def unlink(filepath):
 	"""
-	Remove the symbolic link at fpath.
+	Remove the symbolic link at filepath.
 
 	See: os.rmdir
 	"""
-	link_isdir = os.path.isdir(fpath)
-	result, dwRet = delete_reparse_point(fpath, IO_REPARSE_TAG_SYMBOLIC_LINK, check)
-	if link_isdir and result: RemoveDirectory(fpath)
+	link_isdir = os.path.isdir(filepath)
+	result, dwRet = delete_reparse_point(filepath, IO_REPARSE_TAG_SYMBOLIC_LINK, check)
+	if link_isdir and result: RemoveDirectory(filepath)
 	return result, dwRet
