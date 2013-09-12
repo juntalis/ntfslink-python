@@ -12,14 +12,17 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 import os
 from internals import *
 
-## Utility Classes (Exceptions, etc)
+class InvalidSourceException(Exception):
+	""" Raised when an invalid path is specified for srcpath in a create function. """
 
 class InvalidLinkException(Exception):
-	""" Exception class for when a filepath is specified that is not a symbolic link/junction. """
-
+	""" Raised when an invalid path is given for linkpath in a read function. """
 
 class Handle(HANDLE):
 	""" Wrapper around handle"""
+
+	def __init__(self):
+		pass
 
 	@staticmethod
 	def open(filepath):
@@ -55,14 +58,13 @@ class PassThru(object):
 
 def passthru(cls, realmod):
 	""" Construct a PassThru derived class. """
-	return type(cls, (PassThru,), {})(realmod)
-
+	return type(cls, (PassThru,), { })(realmod)
 
 def str_cleanup(s):
 	""" Helper for cleaning a string prior to creating a reparse point. """
 	return str(s).strip('\0 ')
 
-def create_reparse_point(source, link_name, prefill, isabs=True):
+def create_reparse_point(source, link_name, prefill, isabs = True):
 	"""
 	Create a reparse point at link_name pointing to source.
 
@@ -89,7 +91,7 @@ def create_reparse_point(source, link_name, prefill, isabs=True):
 	CloseHandle(hFile)
 	return result
 
-def deviceioctl(fpath, code, inbuf, insize, outbuf, outsize, hFile=INVALID_HANDLE_VALUE):
+def deviceioctl(fpath, code, inbuf, insize, outbuf, outsize, hFile = INVALID_HANDLE_VALUE):
 	"""
 	Open a file and run it through DeviceIoControl with a specific code.
 	"""
@@ -109,7 +111,7 @@ def deviceioctl(fpath, code, inbuf, insize, outbuf, outsize, hFile=INVALID_HANDL
 		CloseHandle(hFile)
 	return result, dwRet
 
-def get_buffer(fpath, cls, check, hFile=INVALID_HANDLE_VALUE):
+def get_buffer(fpath, cls, check, hFile = INVALID_HANDLE_VALUE):
 	"""
 	Get a reparse buffer.
 	cls: The class we'll be using (either ReparsePoint or ReparseGuidDataBuffer)
@@ -159,19 +161,21 @@ def delete_reparse_point(fpath, tag, check):
 	) != FALSE
 
 	if not result:
-		# If the first try fails, we'll set the GUID and try again
-			buf = get_buffer(fpath, ReparseGuidDataBuffer, None, hFile)
-			reparseInfo.ReparseTag = buf.ReparseTag
-			reparseInfo.ReparseGuid = buf.ReparseGuid
-			result = DeviceIoControl(
-				hFile,
-				FSCTL_DELETE_REPARSE_POINT,
-				byref(reparseInfo),
-				REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
-				None, 0L, byref(dwRet), None
-			) != FALSE
-			if not result:
-				raise WinError()
+	# If the first try fails, we'll set the GUID and try again
+		buf = get_buffer(fpath, ReparseGuidDataBuffer, None, hFile)
+		reparseInfo.ReparseTag = buf.ReparseTag
+		reparseInfo.ReparseGuid = buf.ReparseGuid
+		result = DeviceIoControl(
+			hFile,
+			FSCTL_DELETE_REPARSE_POINT,
+			byref(reparseInfo),
+			REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
+			None, 0L, byref(dwRet), None
+		) != FALSE
+		if not result:
+			raise WinError()
 
 	CloseHandle(hFile)
 	return result, dwRet
+
+

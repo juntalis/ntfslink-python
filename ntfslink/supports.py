@@ -18,6 +18,40 @@ from common import *
 #	English Info: http://schinagl.priv.at/nt/hardlinkshellext/hardlinkshellext.html#symboliclinksforwindowsxp
 _WINXP_DRIVER_FILE = 'symlink.sys'
 
+class FileSystemSupports(object):
+	__slots__ = (
+		'CreationTimestamp',  'LastAccessTimestamp', 'LastChangeTimestamp',
+		'HardLinks', 'SymbolicLinks', 'MountPoints',
+		'SparseFiles', 'NamedStreams', 'AlternateDataStreams',
+		'ExtendedAttributes', 'Compression', 'Encryption',
+		'FileChangeLog', 'FileOwner', 'ACL',
+	)
+
+	def __init__(self, **kw):
+		support = lambda key: setattr(self, key, kw.get(key, True))
+		map(support, self.__slots__)
+
+FSFormats = {
+	'NTFS':  FileSystemSupports(),
+	'UDF':   FileSystemSupports(
+		SymbolicLinks=False, MountPoints=False,
+		Compression=False, Encryption=False,
+		FileChangeLog=False, FileOwner=False, ACL=False
+	),
+	'exFAT': FileSystemSupports(
+		HardLinks=False, SymbolicLinks=False, MountPoints=False,
+		SparseFiles=False, NamedStreams=False, AlternateDataStreams=False,
+		ExtendedAttributes=False, Compression=False, Encryption=False,
+		FileChangeLog=False, FileOwner=False, ACL=False
+	),
+	'FAT32': FileSystemSupports(
+		HardLinks=False, SymbolicLinks=False, MountPoints=False,
+		SparseFiles=False, NamedStreams=False, AlternateDataStreams=False,
+		ExtendedAttributes=False, Compression=False, Encryption=False,
+		FileChangeLog=False, FileOwner=False, ACL=False
+	)
+}
+
 def supports_hardlinks():
 	""" Check whether the current system supports hard links. """
 	# TODO: Implement a real test of this.
@@ -40,7 +74,7 @@ def path_supports_symlinks(filepath):
 	if not supports_symlinks(): return False
 	drive = path.splitdrive(path.abspath(filepath))[0] + '\\'
 	fs = create_unicode_buffer(MAX_PATH+1)
-	if GetVolumeInformation(drive, None, 0, None, None, None, fs, MAX_PATH+1) == FALSE:
+	if GetVolumeInformationW(drive, None, 0, None, None, None, fs, MAX_PATH+1) == FALSE:
 		raise WindowsError()
 	return fs.value.strip() == 'NTFS'
 

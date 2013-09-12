@@ -12,17 +12,9 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 from _windows import *
 
 ## Macros
-def CTL_CODE(DeviceType, Function, Method, Access):
-	""" #define CTL_CODE( DeviceType, Function, Method, Access ) (((DeviceType) << 16) | ((Access) << 14) | ((Function) << 2) | (Method)) """
-	return (DeviceType << 16) | (Access << 14) | (Function << 2) | Method
-
-def DEVICE_TYPE_FROM_CTL_CODE(ctrlCode):
-	""" #define DEVICE_TYPE_FROM_CTL_CODE(ctrlCode) (((DWORD)(ctrlCode & 0xffff0000)) >> 16) """
-	return (ctrlCode & 0xffff0000) >> 16
-
-def METHOD_FROM_CTL_CODE(ctrlCode):
-	""" #define METHOD_FROM_CTL_CODE(ctrlCode) ((DWORD)(ctrlCode & 3)) """
-	return ctrlCode & 3
+def CTL_CODE(DeviceType, Function, Method, Access): return (DeviceType << 16) | (Access << 14) | (Function << 2) | Method
+def DEVICE_TYPE_FROM_CTL_CODE(ctrlCode): return (ctrlCode & 0xffff0000) >> 16
+def METHOD_FROM_CTL_CODE(ctrlCode): return ctrlCode & 3
 
 # File Device codes
 FILE_DEVICE_BEEP = 0x00000001
@@ -98,58 +90,55 @@ METHOD_BUFFERED = 0
 METHOD_IN_DIRECT = 1
 METHOD_OUT_DIRECT = 2
 METHOD_NEITHER = 3
+
 METHOD_DIRECT_TO_HARDWARE = METHOD_IN_DIRECT
 METHOD_DIRECT_FROM_HARDWARE = METHOD_OUT_DIRECT
 
 # Reparse Point buffer constants
 REPARSE_POINT_HEADER_SIZE = sizeof(DWORD) + (2 * sizeof(WORD))
+REPARSE_GUID_DATA_BUFFER_HEADER_SIZE = REPARSE_POINT_HEADER_SIZE + sizeof(GUID)
+
 MAX_NAME_LENGTH = 1024
 MAX_REPARSE_BUFFER = 16 * MAX_NAME_LENGTH
 
 # Symbolic link flags
-SYMLINK_FLAG_RELATIVE = 1
+SYMBOLIC_LINK_FLAG_RELATIVE = 1
 SYMBOLIC_LINK_FLAG_FILE = 0x0
 SYMBOLIC_LINK_FLAG_DIRECTORY = 0x1
 
 # Reparse Tags
-IO_REPARSE_TAG_RESERVED_ZERO = 0x00000000
-IO_REPARSE_TAG_SYMBOLIC_LINK = IO_REPARSE_TAG_RESERVED_ZERO
+def IsReparseTagMicrosoft(reparse_tag): return (reparse_tag & 0x80000000) == 0x80000000
+def IsReparseTagNameSurrogate(reparse_tag): return (reparse_tag & 0x20000000) == 0x20000000
+
+IO_REPARSE_TAG_RESERVED_ZERO   = 0x00000000
+IO_REPARSE_TAG_RESERVED_ONE    = 0x00000001
+IO_REPARSE_TAG_RESERVED_RANGE  = IO_REPARSE_TAG_RESERVED_ONE
+
 IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003L
 IO_REPARSE_TAG_HSM = 0xC0000004L
+IO_REPARSE_TAG_HSM2 = 0x80000006L
 IO_REPARSE_TAG_SIS = 0x80000007L
+IO_REPARSE_TAG_WIM = 0x80000008L
+IO_REPARSE_TAG_CSV = 0x80000009L
+IO_REPARSE_TAG_DFS = 0x8000000AL
+IO_REPARSE_TAG_DFSR = 0x80000012L
+IO_REPARSE_TAG_SYMBOLIC_LINK = 0xA000000CL
 
-#define FSCTL_FILESYSTEM_GET_STATISTICS CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 24, METHOD_BUFFERED, FILE_ANY_ACCESS)
 FSCTL_FILESYSTEM_GET_STATISTICS = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 24, METHOD_BUFFERED, FILE_ANY_ACCESS) # FILESYSTEM_STATISTICS
-
-#define FSCTL_GET_REPARSE_POINT  CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 25, METHOD_BUFFERED, FILE_ANY_ACCESS)
 FSCTL_GET_NTFS_VOLUME_DATA = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 25, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-#define FSCTL_GET_NTFS_FILE_RECORD      CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 26, METHOD_BUFFERED, FILE_ANY_ACCESS)
 FSCTL_GET_NTFS_FILE_RECORD = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 26, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-#define FSCTL_FIND_FILES_BY_SID CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 35, METHOD_NEITHER, FILE_ANY_ACCESS)
 FSCTL_FIND_FILES_BY_SID = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 35, METHOD_NEITHER, FILE_ANY_ACCESS)
 
-#define FSCTL_SET_OBJECT_ID CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 38, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 FSCTL_SET_OBJECT_ID = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 38, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) # FILE_OBJECTID_BUFFER
-
-#define FSCTL_GET_OBJECT_ID CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 39, METHOD_BUFFERED,FILE_ANY_ACCESS)
 FSCTL_GET_OBJECT_ID = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 39, METHOD_BUFFERED,FILE_ANY_ACCESS) # FILE_OBJECTID_BUFFER
-
-#define FSCTL_DELETE_OBJECT_ID CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 40, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 FSCTL_DELETE_OBJECT_ID = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 40, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 
-#define FSCTL_SET_REPARSE_POINT CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+FSCTL_GET_COMPRESSION = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 15, METHOD_BUFFERED, FILE_ANY_ACCESS)
+FSCTL_SET_COMPRESSION = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 16, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
+
 FSCTL_SET_REPARSE_POINT = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
-
-#define FSCTL_GET_REPARSE_POINT CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS)
 FSCTL_GET_REPARSE_POINT = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-#define FSCTL_DELETE_REPARSE_POINT CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 FSCTL_DELETE_REPARSE_POINT = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
-
-# When we use GUIDs
-REPARSE_GUID_DATA_BUFFER_HEADER_SIZE = REPARSE_POINT_HEADER_SIZE + sizeof(GUID)
 
 # Unfortunately, I can't set this to c_wchar * 1 because it will be too small
 # for our buffer when I call this structure's constructor. Instead, I have to
@@ -159,6 +148,16 @@ MAX_REPARSE_PATH_BUFFER = (((MAX_PATH + 1)*2) + 4)
 
 # For our generic reparse buffer
 MAX_GENERIC_REPARSE_BUFFER = MAX_REPARSE_BUFFER - REPARSE_GUID_DATA_BUFFER_HEADER_SIZE
+
+class DummyReparseBuffer(Structure):
+	""" Common fields for mount points and symbolic links
+	"""
+	_fields_ = [
+		('SubstituteNameOffset', USHORT),
+		('SubstituteNameLength', USHORT),
+		('PrintNameOffset', USHORT),
+		('PrintNameLength', USHORT),
+	]
 
 class SymbolicLinkBuffer(Structure):
 	"""
@@ -176,12 +175,12 @@ class SymbolicLinkBuffer(Structure):
 
 	#noinspection PyTypeChecker
 	_fields_ = [
-		("SubstituteNameOffset", USHORT),
-		("SubstituteNameLength", USHORT),
-		("PrintNameOffset", USHORT),
-		("PrintNameLength", USHORT),
-		("Flags", ULONG),
-		("PathBuffer", WCHAR * MAX_REPARSE_PATH_BUFFER)
+		('SubstituteNameOffset', USHORT),
+		('SubstituteNameLength', USHORT),
+		('PrintNameOffset', USHORT),
+		('PrintNameLength', USHORT),
+		('Flags', ULONG),
+		('PathBuffer', WCHAR * MAX_REPARSE_PATH_BUFFER)
 	]
 
 class MountPointBuffer(Structure):
@@ -199,12 +198,9 @@ class MountPointBuffer(Structure):
 
 	#noinspection PyTypeChecker
 	_fields_ = [
-		("SubstituteNameOffset", USHORT),
-		("SubstituteNameLength", USHORT),
-		("PrintNameOffset", USHORT),
-		("PrintNameLength", USHORT),
+
 		# See SymbolicLinkBuffer.PathBuffer for our reasoning.
-		("PathBuffer", WCHAR * MAX_REPARSE_PATH_BUFFER)
+		('PathBuffer', WCHAR * MAX_REPARSE_PATH_BUFFER)
 	]
 
 class GenericReparseBuffer(Structure):
@@ -217,78 +213,37 @@ class GenericReparseBuffer(Structure):
 	"""
 
 	#noinspection PyTypeChecker
-	_fields_ = [
-		("PathBuffer", UCHAR * MAX_GENERIC_REPARSE_BUFFER)
-	]
-
-class DUMMYUNIONNAME(Union):
-	"""
-	CTypes implementation of:
-
-	union {
-		struct {
-			USHORT SubstituteNameOffset;
-			USHORT SubstituteNameLength;
-			USHORT PrintNameOffset;
-			USHORT PrintNameLength;
-			ULONG Flags;
-			WCHAR PathBuffer[1];
-		} SymbolicLinkReparseBuffer;
-		struct {
-			USHORT SubstituteNameOffset;
-			USHORT SubstituteNameLength;
-			USHORT PrintNameOffset;
-			USHORT PrintNameLength;
-			WCHAR PathBuffer[1];
-		} MountPointReparseBuffer;
-		struct {
-			UCHAR  DataBuffer[1];
-		} GenericReparseBuffer;
-	} DUMMYUNIONNAME;
-	"""
-
-	_fields_ = [("SymbolicLink", SymbolicLinkBuffer),
-				("MountPoint", MountPointBuffer),
-				("Generic", GenericReparseBuffer)]
-
+	_fields_ = [ ('PathBuffer', UCHAR * MAX_GENERIC_REPARSE_BUFFER) ]
 
 class ReparsePoint(Structure):
 	"""
-	CTypes implementation of:
-
 	typedef struct _REPARSE_DATA_BUFFER {
-		ULONG  ReparseTag;
+		ULONG ReparseTag;
 		USHORT ReparseDataLength;
 		USHORT Reserved;
-		union {
-			struct {
-				USHORT SubstituteNameOffset;
-				USHORT SubstituteNameLength;
-				USHORT PrintNameOffset;
-				USHORT PrintNameLength;
-				ULONG Flags;
-				WCHAR PathBuffer[1];
-			} SymbolicLinkReparseBuffer;
-			struct {
-				USHORT SubstituteNameOffset;
-				USHORT SubstituteNameLength;
-				USHORT PrintNameOffset;
-				USHORT PrintNameLength;
-				WCHAR PathBuffer[1];
-			} MountPointReparseBuffer;
-			struct {
-				UCHAR  DataBuffer[1];
-			} GenericReparseBuffer;
-		} DUMMYUNIONNAME;
+		union DUMMYUNIONNAME;
 	} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
 	"""
+	class ReparsePointVariations(Union):
+		"""
+		union {
+			struct SymbolicLinkReparseBuffer;
+			struct MountPointReparseBuffer;
+			struct GenericReparseBuffer;
+		} DUMMYUNIONNAME;
+		"""
+		_fields_ = [
+			('SymbolicLink', SymbolicLinkBuffer),
+			('MountPoint', MountPointBuffer),
+			('Generic', GenericReparseBuffer)
+		]
 
-	_anonymous_ = ("du",)
+	_anonymous_ = ('du',)
 	_fields_ = [
-		("ReparseTag", ULONG),
-		("ReparseDataLength", USHORT),
-		("Reserved", USHORT),
-		("du", DUMMYUNIONNAME)
+		('ReparseTag', ULONG),
+		('ReparseDataLength', USHORT),
+		('Reserved', USHORT),
+		('du', ReparsePointVariations)
 	]
 
 class ReparseGuidDataBuffer(Structure):
@@ -303,13 +258,13 @@ class ReparseGuidDataBuffer(Structure):
 		-- ReparsePointBuffer ---
 	} REPARSE_GUID_DATA_BUFFER, *PREPARSE_GUID_DATA_BUFFER;
 	"""
-	_anonymous_ = ("du",)
+	_anonymous_ = ('du',)
 	_fields_ = [
-		("ReparseTag", ULONG),
-		("ReparseDataLength", USHORT),
-		("Reserved", USHORT),
-		("ReparseGuid",GUID),
-		("du", DUMMYUNIONNAME)
+		('ReparseTag', ULONG),
+		('ReparseDataLength', USHORT),
+		('Reserved', USHORT),
+		('ReparseGuid', GUID),
+		('du', ReparsePoint.ReparsePointVariations)
 	]
 
 PReparseGuidDataBuffer = POINTER(ReparseGuidDataBuffer)
@@ -323,7 +278,7 @@ class NTFS_FILE_RECORD_INPUT_BUFFER(Structure):
 		} NTFS_FILE_RECORD_INPUT_BUFFER, *PNTFS_FILE_RECORD_INPUT_BUFFER;
 	"""
 	_fields_ = [
-		("FileReferenceNumber", LARGE_INTEGER)
+		('FileReferenceNumber', LARGE_INTEGER)
 	]
 
 class NTFS_FILE_RECORD_OUTPUT_BUFFER(Structure):
@@ -337,9 +292,9 @@ class NTFS_FILE_RECORD_OUTPUT_BUFFER(Structure):
 		} NTFS_FILE_RECORD_OUTPUT_BUFFER, *PNTFS_FILE_RECORD_OUTPUT_BUFFER;
 	"""
 	_fields_ = [
-		("FileReferenceNumber", LARGE_INTEGER),
-		("FileRecordLength", DWORD),
-		("FileRecordBuffer", BYTE * MAX_REPARSE_BUFFER),
+		('FileReferenceNumber', LARGE_INTEGER),
+		('FileRecordLength', DWORD),
+		('FileRecordBuffer', BYTE * MAX_REPARSE_BUFFER),
 	]
 
 	@property

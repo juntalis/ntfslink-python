@@ -8,23 +8,31 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
+import sys as _sys
+_sys.getfilesystemencoding()
+
 from ctypes import *
 from ctypes.wintypes import *
 from ctypes64 import POINTER
+
+
 
 ## Constants
 # Windows definitions
 ANYSIZE_ARRAY = 1
 MAX_PATH = 260
-INVALID_HANDLE_VALUE = -1
+
 FALSE = 0
 TRUE = 1
+
+NULL = c_void_p(0)
+INVALID_HANDLE_VALUE = -1
 
 # Access
 FILE_ANY_ACCESS = 0
 FILE_SPECIAL_ACCESS = FILE_ANY_ACCESS
-FILE_READ_ACCESS = 0x0001
-FILE_WRITE_ACCESS = 0x0002
+FILE_READ_DATA = FILE_READ_ACCESS = 0x0001
+FILE_WRITE_DATA = FILE_WRITE_ACCESS = 0x0002
 
 # File open flags
 FILE_FLAG_WRITE_THROUGH = 0x80000000
@@ -68,7 +76,11 @@ TRUNCATE_EXISTING = 5
 ## Type Definitions
 # First, we'll do all of our stupid MS-specific typedecl's
 CHAR = c_char
+WCHAR = c_wchar
 UCHAR = c_ubyte
+
+TCHAR = c_wchar
+LPCTSTR = LPTSTR = c_wchar_p
 
 LPOVERLAPPED = c_void_p
 LPSECURITY_ATTRIBUTES = c_void_p
@@ -96,6 +108,7 @@ PSSIZE_T = POINTER(SSIZE_T)
 SZCHAR = sizeof(CHAR)
 SZWCHAR = sizeof(WCHAR)
 SZUCHAR = sizeof(UCHAR)
+SZTCHAR = sizeof(TCHAR)
 
 ## Common Structures/Unions
 

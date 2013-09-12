@@ -10,10 +10,17 @@ To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 
-from . import junctions, supports, symlinks, hardlinks
+from . import junctions, supports, symlinks, hardlinks, cyglinks
 from .common import passthru
 
-symlink = passthru('SymLink', symlinks)
+cyglink =  passthru('CygLink', cyglinks)
+symlink =  passthru('SymLink', symlinks)
 junction = passthru('Junction', symlinks)
 
-__all__ = [ 'junctions', 'junction', 'symlinks', 'symlink', 'hardlinks', 'supports' ]
+__all__ = [
+	'junctions', 'junction',
+	'symlinks',  'symlink',
+	'cyglinks',  'cyglink',
+	'hardlinks',
+	'supports'
+]

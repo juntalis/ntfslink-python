@@ -34,46 +34,47 @@ def _prefill(reparseInfo, source, substlink, link_name, isabs):
 	# Assign the PathBuffer, then resize it, etc.
 	reparseInfo.MountPoint.PathBuffer = u'%s\0%s' % (substlink, source)
 	pReparseInfo = pointer(reparseInfo)
+	#noinspection PyProtectedMember
 	reparseInfo.MountPoint._fields_[4] = ('PathBuffer', bufflen)
 	return pReparseInfo
 
-def create(source, link_name):
+def create(srcpath, linkpath):
 	"""
-	Create a junction at link_name pointing to source directory.
+	Create a junction at linkpath pointing to srcpath directory.
 
 	See: os.symlink
 	"""
-	source = str_cleanup(source)
-	link_name = str_cleanup(link_name)
-	if not path.isdir(source):
-		raise Exception('Junction source does not exist or is not a directory.')
+	srcpath = str_cleanup(srcpath)
+	linkpath = str_cleanup(linkpath)
+	if not path.isdir(srcpath):
+		raise InvalidSourceException('Non-existent source path, "{0}"'.format(srcpath))
 
-	link_name = path.abspath(link_name)
-	if path.exists(link_name):
-		raise Exception('Filepath for new junction already exists.')
+	linkpath = path.abspath(linkpath)
+	if path.exists(linkpath):
+		raise InvalidSourceException('Filepath for new junction already exists.')
 
-	if not CreateDirectory(link_name):
-		raise Exception('Failed to create new directory for target junction.')
+	if not CreateDirectory(linkpath):
+		raise IOError('Failed to create new directory for target junction.')
 
-	result = create_reparse_point(source, link_name, _prefill)
-	if not result: RemoveDirectory(link_name)
+	result = create_reparse_point(srcpath, linkpath, _prefill)
+	if not result: RemoveDirectory(linkpath)
 	return result
 
-def check(fpath):
+def check(linkpath):
 	"""
-	Checks if fpath is a junction.
+	Checks if linkpath is a junction.
 
 	See: os.path.islink
 	"""
-	return IsReparseDir(fpath)
+	return IsReparseDir(linkpath)
 
-def read(fpath):
+def read(linkpath):
 	"""
-	Read the target of the junction at fpath.
+	Read the target of the junction at linkpath.
 
 	See: os.readlink
 	"""
-	reparseInfo = get_buffer(fpath, ReparsePoint, check)
+	reparseInfo = get_buffer(linkpath, ReparsePoint, check)
 	if reparseInfo is not None:
 		# Unfortunately I cant figure out a way to get the PrintName. The problem is, PathBuffer should currently
 		# contain a c_wchar array that holds SubstituteName\0PrintName\0. Unfortunately, since it automatically
@@ -86,14 +87,14 @@ def read(fpath):
 	return None
 
 
-def unlink(fpath):
+def unlink(linkpath):
 	"""
-	Remove the junction at fpath.
+	Remove the junction at linkpath.
 
 	See: os.rmdir
 	"""
-	result, dwRet = delete_reparse_point(fpath, IO_REPARSE_TAG_MOUNT_POINT, check)
-	if result: RemoveDirectory(fpath)
+	result, dwRet = delete_reparse_point(linkpath, IO_REPARSE_TAG_MOUNT_POINT, check)
+	if result: RemoveDirectory(linkpath)
 	return result, dwRet
 
 def example():
@@ -117,10 +118,10 @@ def example():
 	# For some reason, having read() directly followed by unlink results in the read function not returning correctly.
 	# I'll try to figure it out, but since most use cases wont need to read a junction and immediately delete it,
 	# I probably won't put much time into it.
-	buffer = read(sjunction)
-	if buffer is not None:
+	content = read(sjunction)
+	if content is not None:
 		import pprint
-		pprint.pprint('read(%s) %s' % (sjunction, buffer))
+		pprint.pprint('read(%s) %s' % (sjunction, content))
 	raw_input('Press any key to delete the "%s" junction.' % sjunction)
 	print 'unlink(%s)' % sjunction, unlink(sjunction)
 

@@ -20,14 +20,14 @@ def IsFolder(fpath):
 	Checks whether a given path is a folder by using the GetFileAttributes call and testing the result against the
 	FILE_ATTRIBUTE_DIRECTORY flag.
 	"""
-	return bool(GetFileAttributes(fpath) & FILE_ATTRIBUTE_DIRECTORY)
+	return bool(GetFileAttributesW(fpath) & FILE_ATTRIBUTE_DIRECTORY)
 
 def IsReparsePoint(fpath):
 	"""
 	Checks whether a given path is a reparse point by using the GetFileAttributes call and testing the result against
 	the FILE_ATTRIBUTE_REPARSE_POINT flag.
 	"""
-	return bool(GetFileAttributes(fpath) & FILE_ATTRIBUTE_REPARSE_POINT)
+	return bool(GetFileAttributesW(fpath) & FILE_ATTRIBUTE_REPARSE_POINT)
 
 def IsReparseDir(fpath):
 	"""
@@ -36,7 +36,7 @@ def IsReparseDir(fpath):
 		FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT
 	)
 	"""
-	return bool((GetFileAttributes(fpath) & FILE_ATTRIBUTE_REPARSE_DIRECTORY) == FILE_ATTRIBUTE_REPARSE_DIRECTORY)
+	return bool((GetFileAttributesW(fpath) & FILE_ATTRIBUTE_REPARSE_DIRECTORY) == FILE_ATTRIBUTE_REPARSE_DIRECTORY)
 
 def TranslatePath(fpath):
 	"""

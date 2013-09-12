@@ -11,7 +11,7 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 from _winioctl import *
 
 # Our DLL object
-advapi32 = WinDLL('advapi32.dll')
+advapi32 = WinDLL('advapi32')
 
 ## Constants used specifically by our advapi32 functions.
 # Access Types
@@ -28,7 +28,6 @@ STANDARD_RIGHTS_WRITE = READ_CONTROL
 STANDARD_RIGHTS_EXECUTE = READ_CONTROL
 
 STANDARD_RIGHTS_ALL = 0x001F0000L
-
 SPECIFIC_RIGHTS_ALL = 0x0000FFFFL
 
 # AccessSystemAcl access type
@@ -63,6 +62,8 @@ SE_PRIVILEGE_VALID_ATTRIBUTES = SE_PRIVILEGE_ENABLED_BY_DEFAULT | SE_PRIVILEGE_E
 PRIVILEGE_SET_ALL_NECESSARY = 1
 
 # Privilege names.
+SE_CREATE_TOKEN_NAME = 'SeCreateTokenPrivilege'
+SE_ASSIGNPRIMARYTOKEN_NAME = 'SeAssignPrimaryTokenPrivilege'
 SE_RESTORE_NAME = 'SeRestorePrivilege'
 SE_BACKUP_NAME = 'SeBackupPrivilege'
 SE_CREATE_SYMBOLIC_LINK_NAME = 'SeCreateSymbolicLinkPrivilege'
