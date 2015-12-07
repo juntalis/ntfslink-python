@@ -9,9 +9,10 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
-from common import *
+from .common import *
+from contextlib import contextmanager
 
-__all__ = ['example']
+__all__ = ['example', 'findlinks', 'get_fileinfo']
 
 def timeval(fi, attr):
 	print '  %s:' % attr
@@ -21,7 +22,7 @@ def timeval(fi, attr):
 
 def example(filepath):
 	fileInfo = None
-	with Handle.open(filepath) as hFile:
+	with HANDLE.open(filepath) as hFile:
 		fileInfo = BY_HANDLE_FILE_INFORMATION()
 		result = GetFileInformationByHandle(hFile, byref(fileInfo)) != FALSE
 		if not result:
@@ -39,3 +40,32 @@ def example(filepath):
 	print '  nNumberOfLinks       => 0x%X' % fileInfo.nNumberOfLinks
 	print '  nFileIndexHigh       => 0x%X' % fileInfo.nFileIndexHigh
 	print '  nFileIndexLow        => 0x%X' % fileInfo.nFileIndexLow
+
+
+def get_fileinfo(filepath):
+	fileinfo = BY_HANDLE_FILE_INFORMATION()
+	with HANDLE.open(filepath, 'rw') as hFile:
+		if not bool(GetFileInformationByHandle(hFile, byref(fileinfo))):
+			raise WinError()
+	return fileinfo
+
+
+def findlinks(filepath):
+	fileinfo = get_fileinfo(filepath)
+	fileref = LARGE_INTEGER()
+	fileref.Parts.LowPart = fileinfo.nFileIndexLow
+	fileref.Parts.HighPart = fileinfo.nFileIndexHigh
+	buffer = NTFS_FILE_RECORD_OUTPUT_BUFFER()
+	result, retcode = deviceioctl(
+		filepath, FSCTL_GET_NTFS_FILE_RECORD,
+		byref(fileref), sizeof(fileref),
+		byref(buffer), sizeof(buffer)
+	)
+	
+	#if not result:
+	#	print 'retcode => 0x%08X' % retcode.value
+	#	raise WinError()
+	#
+	return buffer
+
+

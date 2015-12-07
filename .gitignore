@@ -1,14 +1,24 @@
-.idea
-*.pyc
+# Compiled
+*.py[cod]
 *.obj
-*.lib
-*.exp
-*.dll
-*.exe
-*.pyd
+*.res
+
+# Packages
+*.egg
+*.egg-info
+dist
 build
-trash/*.c
-trash/*.cpp
-ntfslink/other
-contrib
-.vip
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+
+# Logs
+pip-log.txt
+
+# User Project Folders
+/.vip
+/.idea

@@ -11,7 +11,7 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 from .common import *
 
-__all__ = ['create', 'check', 'read', 'unlink']
+__all__ = [ 'create', 'check', 'read', 'unlink' ]
 
 def _prefill(reparseInfo, source, substlink, link_name, isabs):
 	""" For create """
@@ -29,7 +29,7 @@ def _prefill(reparseInfo, source, substlink, link_name, isabs):
 	reparseInfo.MountPoint.PrintNameOffset = lensubst + SZWCHAR # Ending \0
 	reparseInfo.MountPoint.PrintNameLength = lenprint
 
-	(bufflen, reparseInfo.ReparseDataLength) = CalculateLength(MountPointBuffer, reparseInfo.MountPoint)
+	(bufflen, reparseInfo.ReparseDataLength) = calcsize_pathbuffer(MountPointBuffer, reparseInfo.MountPoint)
 
 	# Assign the PathBuffer, then resize it, etc.
 	reparseInfo.MountPoint.PathBuffer = u'%s\0%s' % (substlink, source)
@@ -46,14 +46,14 @@ def create(srcpath, linkpath):
 	"""
 	srcpath = str_cleanup(srcpath)
 	linkpath = str_cleanup(linkpath)
-	if not path.isdir(srcpath):
+	if not os.path.isdir(srcpath):
 		raise InvalidSourceException('Non-existent source path, "{0}"'.format(srcpath))
 
-	linkpath = path.abspath(linkpath)
-	if path.exists(linkpath):
+	linkpath = os.path.abspath(linkpath)
+	if os.path.exists(linkpath):
 		raise InvalidSourceException('Filepath for new junction already exists.')
 
-	if not CreateDirectory(linkpath):
+	if not CreateDirectoryT(linkpath):
 		raise IOError('Failed to create new directory for target junction.')
 
 	result = create_reparse_point(srcpath, linkpath, _prefill)
@@ -96,38 +96,3 @@ def unlink(linkpath):
 	result, dwRet = delete_reparse_point(linkpath, IO_REPARSE_TAG_MOUNT_POINT, check)
 	if result: RemoveDirectory(linkpath)
 	return result, dwRet
-
-def example():
-	import os
-	sfolder = '/Temp'
-	sjunction = 'temp'
-	if path.isfile(sfolder):
-		import random
-		while path.isfile(sfolder):
-			sfolder += '%d' % int(random.uniform(1, 10))
-
-	print 'Junction Example'
-	removeTemporaryFolder = False
-	if not path.isdir(sfolder):
-		os.mkdir(sfolder)
-		print 'Temporarily created %s folder for the purpose of this example.' % path.abspath(sfolder)
-		removeTemporaryFolder = True
-
-	print 'create(%s, %s)' % (sfolder, sjunction), create(sfolder, sjunction)
-	print 'check(%s)' % sjunction, check(sjunction)
-	# For some reason, having read() directly followed by unlink results in the read function not returning correctly.
-	# I'll try to figure it out, but since most use cases wont need to read a junction and immediately delete it,
-	# I probably won't put much time into it.
-	content = read(sjunction)
-	if content is not None:
-		import pprint
-		pprint.pprint('read(%s) %s' % (sjunction, content))
-	raw_input('Press any key to delete the "%s" junction.' % sjunction)
-	print 'unlink(%s)' % sjunction, unlink(sjunction)
-
-	if removeTemporaryFolder:
-		print 'Removing the temporary folder created at %s.' % path.abspath(sfolder)
-		os.rmdir(sfolder)
-
-if __name__=='__main__':
-	example()

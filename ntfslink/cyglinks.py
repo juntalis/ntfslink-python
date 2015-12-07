@@ -35,7 +35,7 @@ def utf16str(data):
 def verify_filepath(filepath):
 	""" Verify that a filepath has the proper attributes to be a cygwin symlink. """
 	return os.path.isfile(filepath) and \
-		(GetFileAttributesW(filepath) & FILE_ATTRIBUTE_SYSTEM) == FILE_ATTRIBUTE_SYSTEM
+		(GetFileAttributes(filepath) & FILE_ATTRIBUTE_SYSTEM) == FILE_ATTRIBUTE_SYSTEM
 
 def verify_data(data):
 	""" Verify that data contains a valid cygwin symlink """
@@ -57,7 +57,7 @@ def create(srcpath, linkpath):
 	with open(linkpath, 'wb') as f:
 		f.write(cyglink_tag)
 		f.write(src)
-	return SetFileAttributesW(srcpath, FILE_ATTRIBUTE_SYSTEM) != FALSE
+	return bool(SetFileAttributes(srcpath, FILE_ATTRIBUTE_SYSTEM))
 
 def check(linkpath):
 	"""
@@ -88,7 +88,7 @@ def unlink(linkpath):
 	See: os.rmdir
 	"""
 	if not verify_filepath(linkpath): raise InvalidLinkException(linkpath)
-	if SetFileAttributesW(linkpath, FILE_ATTRIBUTE_NORMAL) == FALSE:
+	if not bool(SetFileAttributes(linkpath, FILE_ATTRIBUTE_NORMAL)):
 		raise WinError()
 	os.unlink(linkpath)
 	return True, 0

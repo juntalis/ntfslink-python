@@ -10,7 +10,7 @@ To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 import sys
-from common import *
+from .common import *
 
 # The Windows XP Driver can be found at: http://homepage1.nifty.com/emk/
 #	Download (32-bit): http://homepage1.nifty.com/emk/symlink-1.06-x86.cab
@@ -18,18 +18,51 @@ from common import *
 #	English Info: http://schinagl.priv.at/nt/hardlinkshellext/hardlinkshellext.html#symboliclinksforwindowsxp
 _WINXP_DRIVER_FILE = 'symlink.sys'
 
+FsSupportTests = {
+	'HardLinks',
+	'MountPoints',
+	'SymbolicLinks',
+	'ReparsePoints',
+}
+
+BOOL WINAPI GetVolumeInformationByHandleW(
+  _In_       HANDLE hFile,
+  _Out_opt_  LPWSTR lpVolumeNameBuffer,
+  _In_       DWORD nVolumeNameSize,
+  _Out_opt_  LPDWORD lpVolumeSerialNumber,
+  _Out_opt_  LPDWORD 
+     lpMaximumComponentLength,
+  _Out_opt_  LPDWORD lpFileSystemFlags,
+  _Out_opt_  LPWSTR lpFileSystemNameBuffer,
+  _In_       DWORD nFileSystemNameSize
+)
+
+
 class FileSystemSupports(object):
 	__slots__ = (
-		'CreationTimestamp',  'LastAccessTimestamp', 'LastChangeTimestamp',
-		'HardLinks', 'SymbolicLinks', 'MountPoints',
-		'SparseFiles', 'NamedStreams', 'AlternateDataStreams',
-		'ExtendedAttributes', 'Compression', 'Encryption',
-		'FileChangeLog', 'FileOwner', 'ACL',
+		'CreationTimestamp',
+		'LastAccessTimestamp',
+		'LastChangeTimestamp',
+		'HardLinks',
+		'SymbolicLinks',
+		'MountPoints',
+		'SparseFiles',
+		'NamedStreams',
+		'AlternateDataStreams',
+		'ExtendedAttributes',
+		'Compression',
+		'Encryption',
+		'FileChangeLog',
+		'FileOwner',
+		'ACL',
+		FILE_UNICODE_ON_DISK
 	)
 
 	def __init__(self, **kw):
 		support = lambda key: setattr(self, key, kw.get(key, True))
 		map(support, self.__slots__)
+	
+	
 
 FSFormats = {
 	'NTFS':  FileSystemSupports(),
@@ -61,8 +94,8 @@ def supports_symlinks():
 	""" Checks whether or not the current system supports symbolic links. """
 	if sys.getwindowsversion()[0] >= 6: return True
 	sysdir = GetSystemDirectory()
-	driver = path.join(sysdir, 'drivers', _WINXP_DRIVER_FILE)
-	return path.isfile(driver)
+	driver = os.path.join(sysdir, 'drivers', _WINXP_DRIVER_FILE)
+	return os.path.isfile(driver)
 
 def path_supports_symlinks(filepath):
 	"""
@@ -72,7 +105,7 @@ def path_supports_symlinks(filepath):
 	has an NTFS filesystem.
 	"""
 	if not supports_symlinks(): return False
-	drive = path.splitdrive(path.abspath(filepath))[0] + '\\'
+	drive = os.path.splitdrive(os.path.abspath(filepath))[0] + '\\'
 	fs = create_unicode_buffer(MAX_PATH+1)
 	if GetVolumeInformationW(drive, None, 0, None, None, None, fs, MAX_PATH+1) == FALSE:
 		raise WindowsError()

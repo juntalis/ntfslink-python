@@ -21,11 +21,11 @@ def create(srcpath, linkpath):
 	"""
 	srcpath = str_cleanup(srcpath)
 	linkpath = str_cleanup(linkpath)
-	if os.path.isabs(srcpath) and not path.exists(srcpath):
+	if os.path.isabs(srcpath) and not os.path.exists(srcpath):
 		raise InvalidSourceException('Non-existent source path, "{0}"'.format(srcpath))
 
-	linkpath = path.abspath(linkpath)
-	if path.exists(linkpath):
+	linkpath = os.path.abspath(linkpath)
+	if os.path.exists(linkpath):
 		raise InvalidSourceException('Filepath for new symbolic link already exists.')
 
 	link_isdir = os.path.isdir(srcpath)
@@ -57,7 +57,7 @@ def _prefill(reparseInfo, source, substlink, link_name, isabs):
 	reparseInfo.SymbolicLink.SubstituteNameLength = lensubst
 	reparseInfo.SymbolicLink.Flags = SYMBOLIC_LINK_FLAG_RELATIVE if not isabs else 0
 
-	(bufflen, reparseInfo.ReparseDataLength) = CalculateLength(SymbolicLinkBuffer, reparseInfo.SymbolicLink)
+	(bufflen, reparseInfo.ReparseDataLength) = calcsize_pathbuffer(SymbolicLinkBuffer, reparseInfo.SymbolicLink)
 
 	# Assign the PathBuffer, then resize it, etc.
 	reparseInfo.SymbolicLink.PathBuffer = u'%s%s' % (substlink, source)
@@ -71,11 +71,11 @@ def broken_create(srcpath, linkpath):
 	"""
 	srcpath = str_cleanup(srcpath)
 	linkpath = str_cleanup(linkpath)
-	if os.path.isabs(srcpath) and not path.exists(srcpath):
+	if os.path.isabs(srcpath) and not os.path.exists(srcpath):
 		raise InvalidSourceException('Symbolic link source does not exist or is not a directory.')
 
-	linkpath = path.abspath(linkpath)
-	if path.exists(linkpath):
+	linkpath = os.path.abspath(linkpath)
+	if os.path.exists(linkpath):
 		raise InvalidSourceException('Filepath for new symbolic link already exists.')
 
 	link_isdir = os.path.isdir(srcpath)
