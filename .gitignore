@@ -1,0 +1,30 @@
+# Compiled
+*.py[cod]
+*.obj
+*.res
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+
+# Logs
+pip-log.txt
+
+# VirtualEnv Stuff
+.vip/
+.venv/
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
