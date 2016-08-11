@@ -28,6 +28,20 @@ I have nothing to do with that project, but I did go ahead and add
 logic for checking for it in the functions dealing with symbolic
 link support.
 
+Improvements
+^^^^^^^^^^^^
+Version 2 will include the following improvements over the original module.
+
+- Python 3 Support
+- Custom reparse point manipulation.
+- C extension with a ctypes fallback.
+- Less stupid approach to checking WinXP symlink support.
+- Better performance in the ctypes implementation.
+- Correct privilege acquisitions for the current OS.
+- Better hardlink support. (ability to enumerate a file's hardlinks)
+- Tests/Documentation/PyPi publishing
+
+
 Installation
 ~~~~~~~~~~~~
 
