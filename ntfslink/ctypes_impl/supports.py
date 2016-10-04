@@ -1,7 +1,6 @@
 # encoding: utf-8
 """
-supports.py
-TODO: Description
+:mod:`ctypes` implementation of the support API. 
 
 This program is free software. It comes without any warranty, to
 the extent permitted by applicable law. You can redistribute it
@@ -10,10 +9,9 @@ To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 from .volumes import volumeinfo
-from ..supports import is_gt_winxp
-from ._winapi import errcheck_bool_result, BOOL, LPVOID, get_last_error, \
-	WinError, DWORD, set_last_error, WINFUNCDECL, HANDLE, LPTSTR, advapi32, \
-	errcheck_nonzero_success
+from .._compat import is_gt_winxp
+from ._winapi import ctypes, BOOL, LPVOID, DWORD, HANDLE, LPTSTR, \
+	WINFUNCDECL, advapi32, errcheck_nonzero_success, errcheck_bool_result
 
 #########
 # WinXP #
@@ -36,32 +34,34 @@ if not is_gt_winxp:
 	# Easier to work with LPVOID, especially we're just using NULL for most
 	# parameters.
 	_OpenSCManager = WINFUNCDECL(
-		'OpenSCManager', [ LPVOID, LPVOID, DWORD ],
+		'OpenSCManager', LPVOID, LPVOID, DWORD,
 		restype=HANDLE, use_tchar=True, dll=advapi32,
 		errcheck=errcheck_nonzero_success
 	)
 	_OpenService = WINFUNCDECL(
-		'OpenService', [ HANDLE, LPTSTR, DWORD ],
+		'OpenService', HANDLE, LPTSTR, DWORD,
 		restype=HANDLE, use_tchar=True, dll=advapi32
 	)
 	_CloseServiceHandle = WINFUNCDECL(
-		'CloseServiceHandle', [ HANDLE ],
+		'CloseServiceHandle', HANDLE,
 		restype=BOOL, dll=advapi32,
 		errcheck=errcheck_bool_result
 	)
 
 	def xp_symlinks():
+		""" Verifies the existence of the symlink third party driver on
+		    window XP. """
 		installed = True
 		hSCM = _OpenSCManager(0, 0, SC_MANAGER_CONNECT)
 		hService = _OpenService(hSCM, WINXP_DRIVER_NAME, SERVICE_QUERY_CONFIG)
 		if not hService:
-			lasterror = get_last_error()
+			lasterror = ctypes.get_last_error()
 			if lasterror == ERROR_SERVICE_DOES_NOT_EXIST:
 				hService = None
 				installed = False
-				set_last_error(ERROR_SUCCESS)
+				ctypes.set_last_error(ERROR_SUCCESS)
 			else:
-				raise WinError(code=lasterror)
+				raise ctypes.WinError(code=lasterror)
 
 		if hService is not None:
 			_CloseServiceHandle(hService)

@@ -9,17 +9,10 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
-import sys as _sys
+
 from . import _util as utility
 from ._impl import supports as impl
-
-# Utility lambdas
-_build_winvers = lambda versobj: versobj.major * 100 + versobj.minor
-
-## Windows version stuff
-winvers = _build_winvers(_sys.getwindowsversion())
-is_gt_winxp = winvers >= 600
-is_gt_vista = winvers >= 601
+from ._compat import is_gt_vista, is_gt_winxp
 
 @utility.once
 def _os_symlinks():
@@ -104,7 +97,5 @@ def symlinks(path=None, use_cache=False):
 	else:
 		return impl.fs_reparse_points(path, use_cache)
 
-# Cleanup unnecessary lambdas
-del _build_winvers
-
-__all__ = [ 'hardlinks', 'reparse_points', 'junctions', 'symlinks' ]
+__all__ = [ 'hardlinks', 'reparse_points', 'junctions', 'symlinks',
+            'is_gt_vista', 'is_gt_winxp' ]

@@ -11,8 +11,18 @@ To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 import sys as _sys
-from functools import wraps as _wraps
+from ._compat import wraps as _wraps, reduce as _reduce
 
+###########
+# Globals #
+###########
+
+#: Locally cached reference to builtin_function_or_method type.
+builtin_function = type(ord)
+
+##############
+# Decorators #
+#############
 
 def once(func):
 	"""
@@ -21,16 +31,17 @@ def once(func):
 	:param function func: The decorated function
 	:rtype: function
 	"""
-	func._lazycall = (False, None,)
-
-	# noinspection PyProtectedMember
+	call_result = [False]
+	
+	# noinspection PyProtectedMember,PyMissingOrEmptyDocstring
 	@_wraps(func)
-	def lazy_deco(*args, **kwargs):
-		if not func._lazycall[0]:
-			func._lazycall = (True, func(*args, **kwargs),)
-		return func._lazycall[1]
-	return lazy_deco
-
+	def once_deco(*args, **kwargs):
+		if not call_result[0]:
+			call_result[0] = True
+			call_result.append(func(*args, **kwargs))
+		return call_result[1]
+	
+	return once_deco
 
 def memoize(func):
 	"""
@@ -40,14 +51,82 @@ def memoize(func):
 	:param function func: The decorated function
 	:rtype: function
 	"""
-	cache = func._cache = dict()
-
+	cache = dict()
+	
+	# noinspection PyMissingOrEmptyDocstring
 	@_wraps(func)
 	def memoizer(*args, **kwargs):
 		if args not in cache:
 			cache[args] = func(*args, **kwargs)
 		return cache[args]
+	
 	return memoizer
 
+###############################
+# Utility Classes & Functions #
+###############################
 
+def nameof(obj, default=None):
+	"""
+	Determine the name of a class/function/whatever and return it. If no
+	name can be resolved, return the ``default`` parameter.
+	:param obj: Object to get the name of.
+	:param default: Defaul value to return when no name is detected.
+	:return: Name of object or ``default``.
+	:rtype: str | None
+	"""
+	return getattr(obj, '__name__', default)
+
+# Used within reduce to call each callable on the result of the previous
+_chained = lambda value, _callable: _callable(value)
+
+class CallChain(object):
+	"""
+	Represents a chain of function/method/whatever calls, executed left to
+	right.
+	"""
+	__slots__ = ('_funcs',)
+	
+	def __init__(self, *callables):
+		"""
+		Initializer
+		:param callables: Function collection
+		:type callables: tuple[callable]
+		"""
+		self._funcs = list(callables)
+	
+	def chain(self, *callables):
+		"""
+		Adds additional callables to the chain.
+		:param callables: Function collection
+		:type callables: tuple[callable]
+		:return: self
+		:rtype: CallChain
+		"""
+		self._funcs.extend(list(callables))
+		return self
+	
+	def __call__(self, value):
+		"""
+		Return result of passing 'value' through chained callables.
+		:param value: Parameter
+		:type value: any
+		:return: The result after all functions have been called.
+		:rtype: any
+		:raises ValueError: when the chain is empty.
+		"""
+		if len(self._funcs) == 0:
+			raise ValueError('Empty call chain called!')
+		
+		return _reduce(_chained, self._funcs, value)
+
+def chain(*callables):
+	"""
+	Creates a :class:`CallChain` instance with the given callables.
+	:param callables: Function collection
+	:type callables: tuple[callable]
+	:return: self
+	:rtype: CallChain
+	"""
+	return CallChain(*callables)
 

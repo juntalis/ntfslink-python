@@ -1,7 +1,6 @@
 # encoding: utf-8
 """
-volumes.py
-TODO: Description
+Volume utilities.
 
 This program is free software. It comes without any warranty, to
 the extent permitted by applicable law. You can redistribute it
@@ -13,30 +12,37 @@ import copy
 from ._winapi import errcheck_bool_result_checked, BOOL, BYREF, DWORD, MAX_PATH, \
 	WINFUNCDECL, create_tstring_buffer, LPTSTR, LPDWORD
 
-#########################
-# Shared C Declarations #
-#########################
+##################
+# C Declarations #
+##################
 
 _GetVolumePathName = WINFUNCDECL(
-	'GetVolumePathName', [ LPTSTR, LPTSTR, DWORD ],
-	restype=BOOL,  use_tchar=True,
-	errcheck=errcheck_bool_result_checked
+	'GetVolumePathName', LPTSTR, LPTSTR, DWORD,
+	restype=BOOL,  use_tchar=True, errcheck=errcheck_bool_result_checked
 )
 
 _GetVolumeInformation = WINFUNCDECL(
 	'GetVolumeInformation',
-	[ LPTSTR, LPTSTR, DWORD, LPDWORD, LPDWORD, LPDWORD, LPTSTR, DWORD ],
-	restype=BOOL, use_tchar=True,
-	errcheck=errcheck_bool_result_checked
+	LPTSTR, LPTSTR, DWORD, LPDWORD, LPDWORD, LPDWORD, LPTSTR, DWORD,
+	restype=BOOL, use_tchar=True, errcheck=errcheck_bool_result_checked
 )
 
-##########################
-# Common Implementations #
-##########################
+######################
+# API Implementation #
+######################
 
 _volume_cache = dict()
 
 def volumename(path, raw=False):
+	"""
+	Grab the volume name for a given filepath
+	:param path: Filepath to get the volume of
+	:type path: str
+	:param raw: Whether or not to return the ctype instance or just the value
+	:type raw: bool
+	:return: The volume name for this filepath
+	:rtype: ctypes.c_char_p | ctypes.c_wchar_p | str | unicode
+	"""
 	# Add 1 for a trailing backslash if necessary, and 1 for the terminating
 	# null character.
 	buflen = len(path) + 2
@@ -48,9 +54,9 @@ def volumeinfo(path, use_cache=False):
 	"""
 	Return information for the volume containing the given path. This is going
 	to be a pair containing (file system, file system flags).
-	:param path:
+	:param path: Filepath to get the volumeinfo for
 	:type path: str
-	:param use_cache:
+	:param use_cache: Whether or not to use a cache for this volume's info
 	:type use_cache: bool
 	"""
 	global _volume_cache

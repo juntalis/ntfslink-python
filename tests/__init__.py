@@ -1,6 +1,5 @@
 # encoding: utf-8
 """
-_impl.py
 TODO: Description
 
 This program is free software. It comes without any warranty, to
@@ -10,6 +9,3 @@ To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 
-from .ctypes_impl import supports
-
-__all__ = ['supports',]

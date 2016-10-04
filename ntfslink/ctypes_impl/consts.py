@@ -8,7 +8,8 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
-from ctypes.wintypes import WORD, DWORD, c_ulonglong as QWORD
+from ctypes.wintypes import WORD, DWORD
+from ctypes import c_ulonglong as QWORD
 
 ## Platform-Specific Invalid Values
 # Used a number of times, so let's just calculate this once now and cache
