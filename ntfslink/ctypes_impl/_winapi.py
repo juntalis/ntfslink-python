@@ -92,10 +92,10 @@ else:
 	LPTSTR = c_tchar_p = ctypes.c_char_p
 	create_tstring_buffer = ctypes.create_string_buffer
 
-cstr2wstr = lambda cstr: cstr.encode('utf-16-le')
-
 _TFUNC = lambda name: name + TCHAR_SUFFIX
 _TPAIR = lambda name, dll: (_TFUNC(name), dll,)
+
+cstr2wstr = lambda cstr: cstr.encode('utf-16-le')
 
 ################################
 # Common Handlers for errcheck #

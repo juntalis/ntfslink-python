@@ -42,6 +42,11 @@ FSCTL_SET_REPARSE_POINT    = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFER
 FSCTL_GET_REPARSE_POINT    = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS)
 FSCTL_DELETE_REPARSE_POINT = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 
+## Symbolic Link Flags
+SYMBOLIC_LINK_FLAG_RELATIVE = 1
+SYMBOLIC_LINK_FLAG_FILE = 0x0
+SYMBOLIC_LINK_FLAG_DIRECTORY = 0x1
+
 ## Header Size Constants
 #REPARSE_POINT_HEADER_SIZE = SIZEOF(DWORD) + (2 * SIZEOF(WORD))
 #REPARSE_GUID_DATA_BUFFER_HEADER_SIZE = REPARSE_POINT_HEADER_SIZE + (SIZEOF(DWORD) * 4)
@@ -164,7 +169,7 @@ def nt_query_directory(hfile):
 	query = _NtQueryDirectoryFile(hfile, None, None, None, BYREF(statusblock), BYREF(infobuf), infobuf.size, FileReparsePointInformation, TRUE, None, TRUE)
 	return infobuf.FileReference, infobuf.Tag, query, statusblock
 
-def deviceioctl(hfile, code, inbuf, insize, outbuf, outsize):
+def deviceioctl(hfile, code, in_buffer, in_size, out_buffer, out_size):
 	"""
 	Wrapper around the real DeviceIoControl to return a tuple containing a bool
 	indicating success, and a number containing the size of the bytes returned.
@@ -172,19 +177,19 @@ def deviceioctl(hfile, code, inbuf, insize, outbuf, outsize):
 	:type hfile: HANDLE | int
 	:param code: Decide control code
 	:type code: int
-	:param inbuf: Input buffer
-	:type inbuf: ctypes.c_void_p | ctypes.c_char_p | None
-	:param insize: sizeof(inbuf)
-	:type insize: int
-	:param outbuf: ctypes
-	:type outbuf: ctypes.c_void_p | ctypes.c_char_p | None
-	:param outsize: sizeof(outsize)
-	:type outsize: int
+	:param in_buffer: Input buffer
+	:type in_buffer: ctypes.c_void_p | ctypes.c_char_p | None
+	:param in_size: sizeof(inbuf)
+	:type in_size: int
+	:param out_buffer: ctypes
+	:type out_buffer: ctypes.c_void_p | ctypes.c_char_p | None
+	:param out_size: sizeof(outsize)
+	:type out_size: int
 	:return: Tuple of success, bytes written
 	:rtype: (bool, int,)
 	"""
-	dwret = DWORD(0)
+	bytes_returned = DWORD(0)
 	return _DeviceIoControl(
-		hfile, code, inbuf, insize,
-		outbuf, outsize, BYREF(dwret), None
-	), dwret.value
+		hfile, code, in_buffer, in_size,
+		out_buffer, out_size, BYREF(bytes_returned), None
+	), bytes_returned.value

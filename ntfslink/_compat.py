@@ -104,7 +104,7 @@ if is_py3:
 	buffer_type = _builtin('bytes') # type: bytes
 	
 	#: Binary string type
-	binary_type = _builtin('bytes') # type: bytes
+	bytes_type = _builtin('bytes') # type: bytes
 	
 	#: Types used when testing if an instance is a string
 	str_types = _builtin('str'), # type: (str,)
@@ -116,9 +116,14 @@ if is_py3:
 	#: Python version.
 	reduce = _func.reduce
 	
+	#: Used to coerce a string into a binary string
+	encode_bytes = lambda data: data.encode() \
+	               if isinstance(data, str) else \
+	               bytes_type(data) # type: (T) -> str
+	
 	#: Used to coerce a binary string into a string
 	decode_bytes = lambda data: data.decode() \
-	               if isinstance(data, binary_type) else \
+	               if isinstance(data, bytes_type) else \
 	               str(data) # type: (T) -> str
 	
 	# Used internally to access a method's underlying function
@@ -153,7 +158,7 @@ else:
 	buffer_type = _builtin('buffer') # type: type
 	
 	#: Binary string type
-	binary_type = _builtin('str') # type: type
+	bytes_type = _builtin('str') # type: type
 	
 	#: Types used when testing if an instance is a string
 	str_types = _builtin('basestring'), # type: (type,)
@@ -164,6 +169,9 @@ else:
 	#: Pass-through to :func:`functools.reduce` / :func:`reduce` depending on
 	#: Python version.
 	reduce = _builtin('reduce')
+	
+	#: Used to coerce a string into a binary string
+	decode_bytes = lambda data: str(data) # type: (T) -> str
 	
 	#: Used to coerce a binary string into a string
 	decode_bytes = lambda data: str(data) # type: (T) -> str

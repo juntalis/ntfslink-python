@@ -47,6 +47,14 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 import struct
 
 from .reparse_common import *
+from .._compat import bytes_type
+
+##################
+# Ctypes-Related #
+##################
+
+class
+
 
 ######################
 # Struct Definitions #
@@ -82,6 +90,9 @@ SymbolicLinkBuffer = struct.Struct(
 # Constants #
 #############
 
+## wchar_t size
+WCHAR_SIZE = struct.calcsize('H')
+
 ## Header Size Constants
 REPARSE_POINT_HEADER_SIZE = ReparsePointHeader.size
 REPARSE_POINT_GUID_HEADER_SIZE = ReparsePointGUIDHeader.size
@@ -90,7 +101,14 @@ REPARSE_POINT_GUID_HEADER_SIZE = ReparsePointGUIDHeader.size
 MAX_MOUNTPOINT_REPARSE_BUFFER = MAX_REPARSE_BUFFER - MountPointBuffer.size
 MAX_SYMLINK_REPARSE_BUFFER = MAX_REPARSE_BUFFER - SymbolicLinkBuffer.size
 
-def _create_reparse_point_inner(tag, header, buffer, *hfields):
+def alloc_empty_reparse_point():
+	"""
+	Creates an empty ctypes buffer
+	:return: Buffer size, ctypes buffer
+	:rtype: int, array[ctypes.c_char]
+	"""
+
+def alloc_reparse_point_inner(tag, header, header_size, buffer, buffer_size, *hfields):
 	"""
 	Handles the common functionality between :func:`create_ms_reparse_point` and
 	:func:`create_custom_reparse_point`.
@@ -98,14 +116,20 @@ def _create_reparse_point_inner(tag, header, buffer, *hfields):
 	:type tag: int
 	:param header: Header structure to use
 	:type header: struct.Struct
+	:param header_size: Size of header struct (avoid repeated lookup)
+	:type header_size: int
 	:param buffer: The data buffer's raw bytes.
 	:type buffer: bytes | str
+	:param buffer_size: Size of buffer (avoid recalculation)
+	:type buffer_size: int
 	:param hfields: Additional header fields. (Currently only GUID for custom reparse points)
 	:type hfields:
-	:return: Allocated buffer, prefilled with specified data.
-	:rtype: array[ctypes.c_char]
+	:return: Buffer size, ctypes buffer
+	:rtype: int, array[ctypes.c_char]
 	"""
-
+	header_bytes = header.pack(tag, buffer_size, 0, *hfields)
+	struct_size = header_size + buffer_size
+	return struct_size, ctypes.create_string_buffer(header_bytes + buffer, struct_size)
 
 def create_ms_reparse_point(tag, data=None):
 	"""
@@ -115,20 +139,36 @@ def create_ms_reparse_point(tag, data=None):
 	:type tag: int
 	:param data: Filepath or raw buffer
 	:type data: str | None
-	:return: Allocated buffer, prefilled with specified data.
-	:rtype: array[ctypes.c_char]
+	:return: Buffer size, ctypes buffer
+	:rtype: int, array[ctypes.c_char]
 	:raises NotImplementedError: if the specified tag is unrecognized.
 	"""
-	buffer_size, buffer_struct = 0, None
-	if tag == IO_REPARSE_TAG_MOUNT_POINT:
-		buffer_struct = MountPointBuffer
-		buffer_size = buffer_struct.size
-	elif tag == IO_REPARSE_TAG_SYMLINK:
-		buffer_struct = SymbolicLinkBuffer
-		buffer_size = buffer_struct.size
-	elif not is_ms_tag(tag):
-		raise NotImplementedError('Unknown tag specified: 0x%08X' % tag)
-	
 	# Shorten up references to header stuff.
 	header, header_size = ReparsePointHeader, REPARSE_POINT_HEADER_SIZE
 	
+	# Assemble buffer
+	buffer, extra_attrs = None, tuple()
+	buffer_size, buffer_struct = 0, None
+	if data is None:
+		buffer_size = MAX_REPARSE_BUFFER - header_size
+		buffer = bytes_type()
+	else:
+		if tag == IO_REPARSE_TAG_MOUNT_POINT:
+			buffer_struct = MountPointBuffer
+			buffer_size = buffer_struct.size
+		elif tag == IO_REPARSE_TAG_SYMLINK:
+			buffer_struct = SymbolicLinkBuffer
+			buffer_size = buffer_struct.size
+			extra_attrs = (0 if os.path.isabs(data) \
+				             else SYMBOLIC_LINK_FLAG_RELATIVE,)
+		elif not is_ms_tag(tag):
+			raise NotImplementedError('Unknown tag specified: 0x%08X' % tag)
+		
+		if buffer_struct is None:
+			path_length = len(data)
+			path_size = path_length * WCHAR_SIZE
+			buffer_attrs = buffer_struct.pack(0, path_size, path_size + WCHAR_SIZE + path_size, *extra_attrs)
+			buffer = buffer_attrs + cstr2wstr(data) + cstr2wstr('\0') + cstr2wstr(data)
+			buffer_size += len(buffer)
+	
+	return create_reparse_point_inner(tag, header, header_size, buffer, buffer_size)
