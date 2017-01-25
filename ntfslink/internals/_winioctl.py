@@ -159,7 +159,7 @@ class DummyReparseBuffer(Structure):
 		('PrintNameLength', USHORT),
 	]
 
-class SymbolicLinkBuffer(Structure):
+class SymbolicLinkBuffer(DummyReparseBuffer):
 	"""
 	CTypes implementation of:
 
@@ -175,15 +175,11 @@ class SymbolicLinkBuffer(Structure):
 
 	#noinspection PyTypeChecker
 	_fields_ = [
-		('SubstituteNameOffset', USHORT),
-		('SubstituteNameLength', USHORT),
-		('PrintNameOffset', USHORT),
-		('PrintNameLength', USHORT),
 		('Flags', ULONG),
 		('PathBuffer', WCHAR * MAX_REPARSE_PATH_BUFFER)
 	]
 
-class MountPointBuffer(Structure):
+class MountPointBuffer(DummyReparseBuffer):
 	"""
 	CTypes implementation of:
 
@@ -198,7 +194,6 @@ class MountPointBuffer(Structure):
 
 	#noinspection PyTypeChecker
 	_fields_ = [
-
 		# See SymbolicLinkBuffer.PathBuffer for our reasoning.
 		('PathBuffer', WCHAR * MAX_REPARSE_PATH_BUFFER)
 	]
