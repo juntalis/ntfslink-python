@@ -11,7 +11,7 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 from .. import _util as utility
 from ..supports import is_gt_winxp
-from .winapi import errcheck_bool_result_checked, CloseHandle, DWORD, \
+from .win_api import errcheck_bool_result_checked, CloseHandle, DWORD, \
 	SIZEOF, LPDWORD, advapi32, BOOL, T, POINTER, BYREF, LARGE_INTEGER, \
 	WINFUNCDECL, Structure, HANDLE, LPTSTR
 

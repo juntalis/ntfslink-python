@@ -10,7 +10,7 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 from .volumes import volumeinfo
 from .._compat import is_gt_winxp
-from ._winapi import ctypes, BOOL, LPVOID, DWORD, HANDLE, LPTSTR, \
+from ._win_api import ctypes, BOOL, LPVOID, DWORD, HANDLE, LPTSTR, \
 	WINFUNCDECL, advapi32, errcheck_nonzero_success, errcheck_bool_result
 
 #########

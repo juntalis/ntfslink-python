@@ -9,8 +9,7 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
-from .winapi import *
-from .._util import chain
+from .win_api import *
 
 #############
 # Constants #
@@ -46,6 +45,7 @@ FSCTL_DELETE_REPARSE_POINT = CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFER
 SYMBOLIC_LINK_FLAG_RELATIVE = 1
 SYMBOLIC_LINK_FLAG_FILE = 0x0
 SYMBOLIC_LINK_FLAG_DIRECTORY = 0x1
+SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE = 0x2
 
 ## Header Size Constants
 #REPARSE_POINT_HEADER_SIZE = SIZEOF(DWORD) + (2 * SIZEOF(WORD))
@@ -58,6 +58,10 @@ SYMBOLIC_LINK_FLAG_DIRECTORY = 0x1
 
 ## FILE_INFORMATION_CLASS Values
 FileReparsePointInformation = 0x00000021
+
+## pathname prefix for absolute paths
+PATHNAME_PREFIX = '\\??\\'
+PATHNAME_PREFIX_LEN = len(PATHNAME_PREFIX)
 
 #####################
 # Utility Functions #
@@ -83,6 +87,46 @@ def is_name_surrogate_tag(tag):
 	:rtype: bool
 	"""
 	return bool(tag & 0x20000000)
+
+def has_relative_flags(flags):
+	"""
+	Determines if a symbolic link's flags indicate that it uses a relative path.
+	:param flags: Symbolic link flags
+	:type flags: int
+	:rtype: bool
+	"""
+	return bool(flags & SYMBOLIC_LINK_FLAG_RELATIVE)
+
+def strip_pathname_prefix(path):
+	if path.startswith(PATHNAME_PREFIX):
+		path = path[PATHNAME_PREFIX_LEN:]
+	return path
+
+def process_abspath(path):
+	path = strip_pathname_prefix(path)
+	print_name = os.path.abspath(path)
+	subst_name = PATHNAME_PREFIX + print_name
+	return subst_name, print_name
+
+def extract_buffer_attrs(tag, path):
+	"""
+	Given a filepath and associated tag, extract the flags, print name and substitute name
+	:param tag:
+	:type tag: int
+	:param path:
+	:type path: str
+	:return: substitute name, print name
+	:rtype: tuple[int, str,str]
+	"""
+	flags = 0
+	
+	if tag == IO_REPARSE_TAG_SYMLINK and not os.path.isabs(path):
+		subst_name = print_name = path
+		flags = SYMBOLIC_LINK_FLAG_RELATIVE
+	else:
+		subst_name, print_name = process_abspath(path)
+	
+	return flags, subst_name, print_name
 
 ###########
 # C Types #
@@ -179,17 +223,21 @@ def deviceioctl(hfile, code, in_buffer, in_size, out_buffer, out_size):
 	:type code: int
 	:param in_buffer: Input buffer
 	:type in_buffer: ctypes.c_void_p | ctypes.c_char_p | None
-	:param in_size: sizeof(inbuf)
+	:param in_size: sizeof(in_buffer)
 	:type in_size: int
 	:param out_buffer: ctypes
 	:type out_buffer: ctypes.c_void_p | ctypes.c_char_p | None
-	:param out_size: sizeof(outsize)
+	:param out_size: sizeof(out_buffer)
 	:type out_size: int
 	:return: Tuple of success, bytes written
 	:rtype: (bool, int,)
 	"""
 	bytes_returned = DWORD(0)
 	return _DeviceIoControl(
-		hfile, code, in_buffer, in_size,
-		out_buffer, out_size, BYREF(bytes_returned), None
+		hfile, code,
+		ctypes.cast(in_buffer, LPVOID), in_size,
+		ctypes.cast(out_buffer, LPVOID), out_size,
+		BYREF(bytes_returned), None
 	), bytes_returned.value
+
+

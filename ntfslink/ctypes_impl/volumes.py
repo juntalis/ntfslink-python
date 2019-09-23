@@ -9,7 +9,7 @@ To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
 import copy
-from ._winapi import errcheck_bool_result_checked, BOOL, BYREF, DWORD, MAX_PATH, \
+from ._win_api import errcheck_bool_result_checked, BOOL, BYREF, DWORD, MAX_PATH, \
 	WINFUNCDECL, create_tstring_buffer, LPTSTR, LPDWORD
 
 ##################

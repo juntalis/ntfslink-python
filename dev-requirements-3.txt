@@ -1,1 +1,2 @@
+-r dev-requirements.txt
 -e git+git://github.com/quermit/pymox.git@mox3_init#egg=mox3

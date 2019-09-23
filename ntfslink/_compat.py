@@ -2,11 +2,18 @@
 """
 Python/Windows version compatibility utilities
 """
-import sys as _sys, functools as _func, operator as _oper, types as _types
+import sys as _sys
+import types as _types
+import operator as _oper
+import functools as _func
+try:
+	from typing import *
+except ImportError:
+	pass
 
-#############
-# Constants #
-#############
+####################
+# Read-Only Values #
+####################
 
 # :data:`winver` value calculation.
 _build_winvers = lambda versobj: versobj.major * 100 + versobj.minor
@@ -16,6 +23,12 @@ _py_ver = _sys.version_info[:2]
 
 #: A numerical representation of the current Windows OS version.
 winvers = _build_winvers(_sys.getwindowsversion()) # type: int
+
+#: .. Just an empty tuple.
+empty_tuple = tuple()
+
+#: Method object type
+method_type = _types.MethodType
 
 #: Is the current OS Vista or newer?
 is_gt_winxp = winvers >= 600
@@ -72,13 +85,19 @@ is_gte_py34 = _py_ver >= (3, 4)
 #: "No operation" lambda
 _noop_func = lambda obj: obj
 
-# Accessor for builtins. Technically unnecessary, but PyCharm will highlight
-# the code as an error otherwise.
+# Builtins imports - see below for more details.
+try:
+	import __builtins__
+except ImportError:
+	__builtins__ = globals()['__builtins__']
+
+# Builtins accessors. Technically unnecessary, but PyCharm will
+# highlight the code as an error otherwise.
 if isinstance(__builtins__, dict):
 	# noinspection PyUnresolvedReferences
-	_get_builtin = lambda attr: __builtins__.get(attr)
+	_get_builtin = __builtins__.get
 else:
-	_get_builtin = lambda attr: getattr(__builtins__, attr)
+	_get_builtin = _func.partial(getattr, __builtins__)
 
 def _builtin(*attrs):
 	""" Extract one or multiple attributes from :mod:`__builtins__` """
@@ -112,33 +131,39 @@ if is_py3:
 	#: Types used when testing if an instance is an integer
 	int_types = _builtin('int'), # type: (int,)
 	
+	#: Type used for large integers
+	long_type = _builtin('int')
+	
 	#: Pass-through to :func:`functools.reduce` / :func:`reduce` depending on
 	#: Python version.
 	reduce = _func.reduce
 	
+	#: Used to coerce a string into a unicode string
+	unicode_type = _builtin('str')
+	
 	#: Used to coerce a string into a binary string
 	encode_bytes = lambda data: data.encode() \
 	               if isinstance(data, str) else \
-	               bytes_type(data) # type: (T) -> str
+	               bytes_type(data) # type: Callable[[AnyStr], bytes]
 	
 	#: Used to coerce a binary string into a string
 	decode_bytes = lambda data: data.decode() \
 	               if isinstance(data, bytes_type) else \
-	               str(data) # type: (T) -> str
+	               str(data) # type: Callable[[ByteString], str]
 	
 	# Used internally to access a method's underlying function
 	_meth_func = '__func__'
 	
 	#: Grab the underlying function of a bound method.
-	get_bound_method_function = lambda obj: getattr(obj, _meth_func, None) # type: (method) -> function
+	get_bound_method_function = lambda obj: getattr(obj, _meth_func, None) # type: Callable[[method_type], function]
 	
 	#: Grab the underlying function of an unbound method.
-	get_unbound_method_function = _noop_func # type: (method) -> function
+	get_unbound_method_function = _noop_func # type: Callable[[method_type], function]
 	
 	#: Grab the underlying function of a method
 	get_method_function = lambda method: get_bound_method_function(method) \
 	                      if isinstance(method, _types.MethodType) else \
-	                      get_unbound_method_function(method)
+	                      get_unbound_method_function(method) # type: Callable[[method_type], function]
 	
 	# Used internally for executing code in a namespace
 	exec_ = _builtin('exec')
@@ -165,28 +190,34 @@ else:
 	
 	#: Types used when testing if an instance is an integer
 	int_types = _builtin('int', 'long') # type: (type,)
+
+	#: Type used for large integers
+	long_type = _builtin('long')
 	
 	#: Pass-through to :func:`functools.reduce` / :func:`reduce` depending on
 	#: Python version.
 	reduce = _builtin('reduce')
 	
+	#: Used to coerce a string into a unicode string
+	unicode_type = _builtin('unicode')
+	
 	#: Used to coerce a string into a binary string
-	decode_bytes = lambda data: str(data) # type: (T) -> str
+	decode_bytes = lambda data: str(data) # type: Callable[[AnyStr], bytes]
 	
 	#: Used to coerce a binary string into a string
-	decode_bytes = lambda data: str(data) # type: (T) -> str
+	encode_bytes = lambda data: str(data) # type: Callable[[ByteString], str]
 	
 	# Used internally to access a method's underlying function
 	_meth_func = 'im_func'
 	
 	#: Grab the underlying function of a bound method.
-	get_bound_method_function = _oper.attrgetter(_meth_func) # type: (method) -> function
+	get_bound_method_function = _oper.attrgetter(_meth_func) # type: Callable[[method_type], function]
 	
 	#: Grab the underlying function of an unbound method
-	get_unbound_method_function = get_bound_method_function
+	get_unbound_method_function = get_bound_method_function # type: Callable[[method_type], function]
 	
 	#: Grab the underlying function of a method
-	get_method_function = get_bound_method_function
+	get_method_function = get_bound_method_function # type: Callable[[method_type], function]
 	
 	# noinspection PyProtectedMember
 	def exec_(_code_, _globs_=None, _locs_=None):
@@ -263,40 +294,40 @@ def add_metaclass(metaclass):
 		orig_vars.pop('__weakref__', None)
 		return metaclass(cls.__name__, cls.__bases__, orig_vars)
 	return wrapper
-
-_add_doc(get_bound_method_function, """
-Grab the underlying function of a bound method.
-:param obj: Target bound method
-:type obj: method
-:return: Method's underlying function
-:rtype: function
-""")
-
-_add_doc(get_unbound_method_function, """
-Grab the underlying function of an unbound method.
-:param obj: Target unbound method
-:type obj: method
-:return: Method's underlying function
-:rtype: function
-""")
-
-_add_doc(get_method_function, """
-Grab the underlying function of a method, regardless of whethere's it's
-currently bound to an instance or not.
-:param obj: Target method
-:type obj: method
-:return: Method's underlying function
-:rtype: function
-""")
-
-_add_doc(reraise, """
-Reraise an exception.
-:param tp: Exception type or instance
-:type tp: type | None
-:param value: Optional exception value.
-:param tb: Optional traceback instance.
-:type tb: traceback | None
-""")
+#
+# _add_doc(get_bound_method_function, """
+# Grab the underlying function of a bound method.
+# :param obj: Target bound method
+# :type obj: method
+# :return: Method's underlying function
+# :rtype: function
+# """)
+#
+# _add_doc(get_unbound_method_function, """
+# Grab the underlying function of an unbound method.
+# :param obj: Target unbound method
+# :type obj: method
+# :return: Method's underlying function
+# :rtype: function
+# """)
+#
+# _add_doc(get_method_function, """
+# Grab the underlying function of a method, regardless of whethere's it's
+# currently bound to an instance or not.
+# :param obj: Target method
+# :type obj: method
+# :return: Method's underlying function
+# :rtype: function
+# """)
+#
+# _add_doc(reraise, """
+# Reraise an exception.
+# :param tp: Exception type or instance
+# :type tp: type | None
+# :param value: Optional exception value.
+# :param tb: Optional traceback instance.
+# :type tb: traceback | None
+# """)
 
 _add_doc(raise_from, """
 Exception chaining mechanism.
@@ -306,4 +337,4 @@ Exception chaining mechanism.
 :type value: T <= Exception | None
 """)
 
-del _py_ver, _build_winvers, _get_builtin, _builtin
+del _py_ver, _build_winvers

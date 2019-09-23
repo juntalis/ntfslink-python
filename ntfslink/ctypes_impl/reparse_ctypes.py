@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-TODO: Description
+CTypes implementation of the reparse point structures etc.
 
 This program is free software. It comes without any warranty, to
 the extent permitted by applicable law. You can redistribute it
@@ -13,14 +13,15 @@ from ctypes.wintypes import WCHAR
 
 
 from .reparse_common import *
-from .._compat import buffer_type
-from ._winapi import DWORD, WORD, BYTE
+from .._compat import buffer_type, unicode_type, str_types
+from ._win_api import DWORD, WORD, BYTE, UCHAR
 
 #############
 # Constants #
 #############
 
 ## Header Size Constants
+WCHAR_SIZE = ctypes.sizeof(ctypes.c_wchar)
 REPARSE_POINT_HEADER_SIZE = SIZEOF(DWORD) + (2 * SIZEOF(WORD))
 REPARSE_GUID_DATA_BUFFER_HEADER_SIZE = REPARSE_POINT_HEADER_SIZE + (SIZEOF(DWORD) * 4)
 
@@ -29,11 +30,18 @@ MAX_GENERIC_REPARSE_BUFFER = MAX_REPARSE_BUFFER - REPARSE_GUID_DATA_BUFFER_HEADE
 MAX_MOUNTPOINT_REPARSE_BUFFER = MAX_GENERIC_REPARSE_BUFFER - SIZEOF(WORD) * 4
 MAX_SYMLINK_REPARSE_BUFFER = MAX_MOUNTPOINT_REPARSE_BUFFER - SIZEOF(DWORD)
 
-################
-# Type Aliases #
-################
 
-UCHAR = ctypes.c_ubyte
+def wsize(data):
+	"""
+
+	:param data:
+	:type data: str | int
+	:return:
+	:rtype: int
+	"""
+	if isinstance(data, str_types):
+		data = len(data)
+	return data * WCHAR_SIZE
 
 ##############
 # Structures #
@@ -42,10 +50,8 @@ UCHAR = ctypes.c_ubyte
 class GUID(ctypes.Structure):
 	""" Borrowed small parts of this from the comtypes module. """
 	_fields_ = [
-		('Data1', DWORD),
-		('Data2', WORD),
-		('Data3', WORD),
-		('Data4', (BYTE * 8)),
+		('Data1', QWORD),
+		('Data2', QWORD),
 	]
 	
 	#: Represents an empty (zero-ed out) :class:`GUID` instance.
@@ -78,19 +84,36 @@ class GUID(ctypes.Structure):
 		"""
 		return hash(buffer_type(self))
 	
-	def copy(self, other):
+	def __copy__(self):
 		"""
-		:param other:
-		:type other:
-		:return:
-		:rtype:
+		Copy magic method
+		:return: Newly created GUID struct populated with the same values.
+		:rtype: GUID
+		"""
+		return self.copy()
+	
+	def copy(self):
+		"""
+		Creates a new GUID struct with the same data.
+		:return: Newly created GUID struct populated with the same values.
+		:rtype: GUID
 		"""
 		return GUID(
 			Data1=self.Data1,
-			Data2=self.Data2,
-			Data3=self.Data3,
-			Data4=self.Data4
+			Data2=self.Data2
 		)
+	
+	def copyfrom(self, other):
+		"""
+		Copies another GUID into this one.
+		:param other: Other GUID
+		:type other: GUID
+		:return: self
+		:rtype: GUID
+		"""
+		self.Data1 = other.Data1
+		self.Data2 = other.Data2
+		return self
 
 GUID.NULL = GUID()
 
@@ -98,75 +121,108 @@ class ReparsePointHeader(ctypes.Structure):
 	""" Reparse Point Header for MS reparse points (symlinks, junctions,
 	    mountpoints) """
 	_fields_ = [
-		('ReparseTag', DWORD),
-		('ReparseDataLength', WORD),
-		('Reserved', WORD),
+		('tag', DWORD),     # ReparseTag
+		('length', WORD),   # ReparseDataLength
+		('reserved', WORD), # Reserved
 	]
 
-class ReparsePointGUIDHeader(ctypes.Structure):
+class ReparsePointGUIDHeader(ReparsePointHeader):
 	""" Reparse Point Header for third party reparse points (I don't know
 	    of any) """
 	_fields_ = [
-		('ReparseTag', DWORD),
-		('ReparseDataLength', WORD),
-		('Reserved', WORD),
-		('ReparseGuid', GUID),
+		('guid', GUID), # ReparseGuid
 	]
 
-class SymbolicLinkBuffer(ctypes.Structure):
+class MSReparsePointBuffer(ctypes.Structure):
+	"""
+	Base class for MS reparse points that provides easy
+	access to the substitute_name and PrintNAme fields.
+	"""
+	_fields_ = [
+		('substitute_name_offset', WORD), # SubstituteNameOffset
+		('substitute_name_size', WORD),   # SubstituteNameSize
+		('print_name_offset', WORD),      # PrintNameOffset
+		('print_name_size', WORD),        # PrintNameSize
+	]
+	
+	def wstring_at(self, offset, length):
+		"""
+		:param offset: String offset (in bytes)
+		:param length: String size (in wchars)
+		:return:
+		:rtype: str
+		"""
+		cls = type(self)
+		path_buffer_addr = ctypes.addressof(self) + cls.path_buffer.offset
+		wstring_addr = path_buffer_addr + offset
+		return ctypes.wstring_at(wstring_addr, length)
+	
+	@property
+	def substitute_name(self):
+		"""
+		:return: substitute_name
+		:rtype: str
+		"""
+		offset = self.substitute_name_offset
+		length = self.substitute_name_size // WCHAR_SIZE
+		return self.wstring_at(offset, length)
+	
+	@property
+	def print_name(self):
+		"""
+		:return: substitute_name
+		:rtype: str
+		"""
+		offset = self.print_name_offset
+		length = self.print_name_size // WCHAR_SIZE
+		return self.wstring_at(offset, length)
+
+class SymbolicLinkBuffer(MSReparsePointBuffer):
 	""" Symbolic link Reparse Point Buffer """
 	_fields_ = [
-		('SubstituteNameOffset', WORD),
-		('SubstituteNameLength', WORD),
-		('PrintNameOffset', WORD),
-		('PrintNameLength', WORD),
-		('Flags', DWORD),
-		('PathBuffer', WCHAR * MAX_SYMLINK_REPARSE_BUFFER)
+		('flags', DWORD),
+		('path_buffer', WCHAR * MAX_SYMLINK_REPARSE_BUFFER)
 	]
 
-class MountPointBuffer(ctypes.Structure):
+class MountPointBuffer(MSReparsePointBuffer):
 	""" Mount Point/Junction Reparse Point Buffer """
 	_fields_ = [
-		('SubstituteNameOffset', WORD),
-		('SubstituteNameLength', WORD),
-		('PrintNameOffset', WORD),
-		('PrintNameLength', WORD),
-		('PathBuffer', WCHAR * MAX_SYMLINK_REPARSE_BUFFER)
+		('path_buffer', WCHAR * MAX_MOUNTPOINT_REPARSE_BUFFER)
 	]
 
 class GenericReparseBuffer(ctypes.Structure):
 	""" Generic Reparse Point Buffer """
-	_fields_ = [('PathBuffer', UCHAR * MAX_GENERIC_REPARSE_BUFFER)]
+	_fields_ = [('path_buffer', UCHAR * MAX_GENERIC_REPARSE_BUFFER)]
 
 class ReparsePointBuffer(ctypes.Union):
 	""" Union containing all supported reparse point buffer types. """
 	_fields_ = [
-		('SymbolicLink', SymbolicLinkBuffer),
-		('MountPoint', MountPointBuffer),
-		('Generic', GenericReparseBuffer)
+		('symbolic_link', SymbolicLinkBuffer),
+		('mount_point', MountPointBuffer),
+		('generic', GenericReparseBuffer)
 	]
 
 def _get_reparse_point_buffer(self):
 	""" Logic for :attr:`ReparsePointGUIDData.Buffer` &
 	    :attr:`ReparsePointData.Buffer` properties. """
-	if self.ReparseTag == IO_REPARSE_TAG_MOUNT_POINT:
-		return self._Buffer.MountPoint
-	elif self.ReparseTag == IO_REPARSE_TAG_SYMLINK:
-		return self._Buffer.SymbolicLink
+	if self.tag == IO_REPARSE_TAG_MOUNT_POINT:
+		return self._buffer.mount_point
+	elif self.tag == IO_REPARSE_TAG_SYMLINK:
+		return self._buffer.symbolic_link
 	else:
-		return self._Buffer
+		return self._buffer.generic
 
 class ReparsePointData(ReparsePointHeader):
 	""" Combines the reparse point buffer union with the header struct. """
 	_fields_ = [
-		('_Buffer', ReparsePointBuffer)
+		('_buffer', ReparsePointBuffer)
 	]
 	
 	@property
-	def Buffer(self):
+	def buffer(self):
 		"""
 		Accesses the reparse point buffer based on the value of
-		:attr:`ReparsePointGUIDHeader.ReparseTag`
+		:attr:`ReparsePointGUIDHeader.tag`
 		:return: Buffer instance
 		:rtype: SymbolicLinkBuffer | MountPointBuffer | GenericReparseBuffer
 		"""
@@ -183,9 +239,72 @@ class ReparsePointGUIDData(ReparsePointGUIDHeader):
 	def Buffer(self):
 		"""
 		Accesses the reparse point buffer based on the value of
-		:attr:`ReparsePointGUIDHeader.ReparseTag`
+		:attr:`ReparsePointGUIDHeader.tag`
 		:return: Buffer instance
 		:rtype: SymbolicLinkBuffer | MountPointBuffer | GenericReparseBuffer
 		"""
 		# noinspection PyTypeChecker
 		return _get_reparse_point_buffer(self)
+
+##################
+# Implementation #
+##################
+
+def create_ms_reparse_point(tag, data=None, guid=False):
+	"""
+	Creates a ctypes buffer containing
+
+	:param tag: Reparse tag
+	:type tag: int
+	:param data: Filepath or raw buffer
+	:type data: str | None
+	:param guid: Whether or not to use the GUID-based header
+	:type guid: bool | tuple[int,...] | tuple[long,...]
+	:return: Buffer size, ctypes buffer
+	:rtype: int, ctypes.c_void_p
+	:raises NotImplementedError: if the specified tag is unrecognized/unsupported.
+	"""
+	# Handle guid param
+	struct_type = ReparsePointData
+	if guid:
+		struct_type = ReparsePointGUIDData
+		if isinstance(guid, bool):
+			guid = GUID(0,0)
+		elif isinstance(guid, tuple):
+			guid = GUID(*guid)
+	
+	struct_size = ctypes.sizeof(struct_type)
+	struct_data = struct_type(tag, struct_size, 0)
+	struct_buffer = struct_data.buffer
+	
+	# Process GUID
+	if guid:
+		struct_data.guid.copyfrom(guid)
+	
+	# Process data
+	if data is not None:
+		# Extract path names and calculate sizes
+		flags, subst_name, print_name = extract_buffer_attrs(tag, data)
+		subst_size, print_size = wsize(subst_name), wsize(print_name)
+		
+		# Process tag-specific functionality.
+		if tag == IO_REPARSE_TAG_SYMLINK:
+			struct_buffer.flags = flags
+			path_buffer_format = '{0}{1}'
+			print_offset = subst_size
+		elif tag == IO_REPARSE_TAG_MOUNT_POINT:
+			path_buffer_format = '{0}\0{1}'
+			print_offset = subst_size + WCHAR_SIZE
+		else:
+			raise NotImplementedError('Unknown MS tag specified: 0x{:08X}'.format(tag))
+
+		# Fill in our buffer
+		struct_buffer.substitute_name_offset = 0
+		struct_buffer.substitute_name_size = subst_size
+		struct_buffer.print_name_offset = print_offset
+		struct_buffer.print_name_size = print_size
+		struct_buffer.path_buffer = unicode_type(
+			path_buffer_format.format(subst_name, print_name)
+		)
+	
+	return struct_size, struct_data

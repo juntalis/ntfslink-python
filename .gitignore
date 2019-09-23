@@ -2,7 +2,20 @@
 *.py[cod]
 *.obj
 *.res
-
+*.h
+*.c
+*.a
+*.obj
+*.o
+*.cpp
+*.exe
+/bench.py
+/ntquerydir.py
+/Ntquery.md
+/usage.py
+/test-*.py
+/io
+/cancel
 # Packages
 *.egg
 *.egg-info
@@ -21,7 +34,11 @@ pip-log.txt
 
 # VirtualEnv Stuff
 .vip/
+.vip2/
+.vip3/
 .venv/
+
+/ntfslink/cext_impl
 
 # PyCharm
 .idea/
