@@ -129,7 +129,6 @@ def obtain_privileges(privileges):
 def ensure_privileges():
 	""" Ensure that all necessary usermode privileges have been acquired for the
 	    active process. """
-	global _OBTAINABLE_PRIVILEGES
 	obtain_privileges(_OBTAINABLE_PRIVILEGES)
 
 #__all__ = ( 'obtain_privileges', )

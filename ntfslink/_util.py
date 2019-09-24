@@ -10,7 +10,7 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
-import sys as _sys
+import operator
 from ._compat import wraps as _wraps, reduce as _reduce
 
 ###########
@@ -76,6 +76,33 @@ def nameof(obj, default=None):
 	:rtype: str | None
 	"""
 	return getattr(obj, '__name__', default)
+
+def delegate_property(*attrs):
+	"""
+	Define an instance property that is delegated to self.attr1[.attr2.attr3...]
+
+	Example::
+
+		>>> class MyClass(object):
+		...
+		...     def __init__(self, obj):
+		...         self.obj = obj
+		...
+		...     foo = delegate_property('obj', '__class__')
+		...
+		>>> a = MyClass(obj=list())
+		>>> a.foo
+		<class 'list'>
+		>>> a.obj.__class__
+		<class 'list'>
+
+	:param str attrs: Nested attributes to access
+	:return: Class property that delegates to the nested attr.
+	:raise ValueError: if called without any attr names
+	"""
+	if not attrs:
+		raise ValueError('delegate_property expects at least one attr name!')
+	return property(operator.attrgetter('.'.join(attrs)))
 
 # Used within reduce to call each callable on the result of the previous
 _chained = lambda value, _callable: _callable(value)

@@ -9,6 +9,8 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
+from contextlib import contextmanager
+
 from ._win_api import *
 from .privileges import ensure_privileges
 
@@ -33,6 +35,7 @@ def METHOD_FROM_CTL_CODE(code):
 #############
 
 ## Creation Flags
+CREATE_NEW = 1
 OPEN_EXISTING = 3
 
 ## File Operation Constants
@@ -91,13 +94,19 @@ _CreateFile = WINFUNCDECL(
 	restype=HANDLE, use_tchar=True, errcheck=errcheck_handle_result
 )
 
+@contextmanager
 def _open_file(filepath, access, share):
 	""" Wrapper around ``CreateFile`` API. """
 	ensure_privileges()
 	flags = _FILE_FLAG_OPEN_REPARSE_POINT | _FILE_FLAG_BACKUP_SEMANTICS \
 	        if os.path.isdir(filepath) else \
 	        _FILE_FLAG_OPEN_REPARSE_POINT
-	return _CreateFile(filepath, access, share, None, OPEN_EXISTING, flags, PNULL)
+	disposition = OPEN_EXISTING if os.path.exists(filepath) else CREATE_NEW
+	handle = _CreateFile(filepath, access, share, None, disposition, flags, PNULL)
+	try:
+		yield handle
+	finally:
+		CloseHandle(handle)
 
 def open_file_r(filepath):
 	"""
@@ -107,9 +116,8 @@ def open_file_r(filepath):
 	:return: A valid handle
 	:rtype: HANDLE
 	"""
-	return _open_file(filepath, _GENERIC_READ, _FILE_SHARE_READ)
+	return _open_file(filepath, _GENERIC_READ, _FILE_SHARE_ALL)
 
 def open_file_w(filepath):
 	""" Opens a file for writing/deleting. """
 	return _open_file(filepath, _GENERIC_WRITE, _FILE_SHARE_ALL)
-

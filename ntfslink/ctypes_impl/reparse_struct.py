@@ -44,12 +44,76 @@ and/or modify it under the terms of the Do What The Fuck You Want
 To Public License, Version 2, as published by Sam Hocevar. See
 http://sam.zoy.org/wtfpl/COPYING for more details.
 """
-import functools
+
 import struct
+import functools
 from collections import namedtuple
 
 from .reparse_common import *
+from .._util import delegate_property
 from .._compat import encode_bytes, decode_bytes, long_type, empty_tuple, str_types
+
+########################
+# Parse Result Objects #
+########################
+
+header_fields = ['tag', 'length', 'reserved']
+
+ReparsePointHeader = namedtuple('ReparsePointHeader', header_fields)
+_ReparsePointGUIDHeader = namedtuple('ReparsePointGUIDHeader', header_fields + ['guid'])
+
+@functools.wraps(_ReparsePointGUIDHeader)
+def ReparsePointGUIDHeader(tag, length, reserved, *guid):
+	return _ReparsePointGUIDHeader(tag, length, reserved, guid)
+
+buffer_fields = ['substitute_name_offset', 'substitute_name_size', 'print_name_offset',
+                 'print_name_size' ]
+
+MountPointBuffer = namedtuple('MountPointBuffer', buffer_fields)
+SymbolicLinkBuffer = namedtuple('SymbolicLinkBuffer', buffer_fields + ['flags'])
+
+PathBuffer = namedtuple('PathBuffer', ['substitute_name', 'print_name'])
+
+class ReparsePoint(object):
+	"""
+	Represents the data parsed from a reparse point structure. Zero validation
+	is performed on the constructor parameters, so you should probably avoid constructing
+	it in your own code.
+	"""
+	
+	__slots__ = ('header', 'buffer', 'path',)
+	
+	def __init__(self, header, buffer, path):
+		"""
+		Constructor
+		:param header: Parsed header object
+		:type header: ReparsePointGUIDHeader | ReparsePointHeader
+		:param buffer: Parsed buffer object
+		:type buffer: MountPointBuffer | SymbolicLinkBuffer
+		:param path: Parsed path buffer
+		:type path: PathBuffer
+		"""
+		self.header = header
+		self.buffer = buffer
+		self.path = path
+	
+	# Provide property accessors to all the potential header fields.
+	tag = delegate_property('header', 'tag')
+	length = delegate_property('header', 'length')
+	reserved = delegate_property('header', 'reserved')
+	guid = delegate_property('header', 'guid')
+	
+	# Provide property accessors to all the potential buffer fields.
+	flags = delegate_property('buffer','flags')
+	print_name_size = delegate_property('buffer','print_name_size')
+	print_name_offset = delegate_property('buffer','print_name_offset')
+	substitute_name_size = delegate_property('buffer','substitute_name_size')
+	substitute_name_offset = delegate_property('buffer','substitute_name_offset')
+	
+	# Provide property accessors to all the potential path fields.
+	print_name = delegate_property('path','print_name')
+	substitute_name = delegate_property('path','substitute_name')
+
 
 ######################
 # Struct Definitions #
@@ -113,24 +177,6 @@ def wsize(data):
 # Implementation #
 ##################
 
-header_fields = ['tag', 'length', 'reserved']
-
-ReparsePointHeader = namedtuple('ReparsePointHeader', header_fields)
-_ReparsePointGUIDHeader = namedtuple('ReparsePointGUIDHeader', header_fields + ['guid'])
-
-@functools.wraps(_ReparsePointGUIDHeader)
-def ReparsePointGUIDHeader(tag, length, reserved, *guid):
-	return _ReparsePointGUIDHeader(tag, length, reserved, guid)
-
-buffer_fields = ['substitute_name_offset', 'substitute_name_size', 'print_name_offset',
-                 'print_name_size' ]
-
-MountPointBuffer = namedtuple('MountPointBuffer', buffer_fields)
-SymbolicLinkBuffer = namedtuple('SymbolicLinkBuffer', buffer_fields + ['flags'])
-
-PathBuffer = namedtuple('PathBuffer', ['substitute_name', 'print_name'])
-ReparsePoint = namedtuple('ReparsePoint', ['header','buffer','path'])
-
 _struct_mapping = dict()
 _struct_mapping[ReparsePointHeader_struct] = ReparsePointHeader
 _struct_mapping[ReparsePointGUIDHeader_struct] = ReparsePointGUIDHeader
@@ -141,7 +187,7 @@ _struct_mapping[ReparsePointGUIDHeader] = ReparsePointGUIDHeader_struct
 _struct_mapping[MountPointBuffer] = MountPointBuffer_struct
 _struct_mapping[SymbolicLinkBuffer] = SymbolicLinkBuffer_struct
 
-def parse_reparse_point(data, header_type):
+def _parse_reparse_point(data, header_type):
 	"""
 	TODO: Documentation
 	:param data:
@@ -183,11 +229,33 @@ def parse_reparse_point(data, header_type):
 	path_data = data[path_offset:]
 	print_ofs, print_size = buffer_obj.print_name_offset, buffer_obj.print_name_size
 	subst_ofs, subst_size = buffer_obj.substitute_name_offset, buffer_obj.substitute_name_size
-	subst_name = wstr2cstr(path_data[subst_ofs:subst_size])
+	subst_name = wstr2cstr(path_data[subst_ofs:subst_ofs + subst_size])
 	print_name = wstr2cstr(path_data[print_ofs:print_ofs + print_size])
 	path_obj = PathBuffer(subst_name, print_name)
 	
 	return ReparsePoint(header_obj, buffer_obj, path_obj)
+
+def parse_reparse_point(data):
+	"""
+	Given the raw bytes of a reparse point structure without a GUID-based header, parse out
+	all the struct details.
+	:param data: Raw bytes for the reparse point structure
+	:type data: bytes | ctypes.c_char_p
+	:return: Parsed reparse point
+	:rtype: ReparsePoint
+	"""
+	return _parse_reparse_point(data, ReparsePointHeader)
+
+def parse_guid_reparse_point(data):
+	"""
+	Given the raw bytes of a reparse point structure with a GUID-based header, parse out
+	all the struct details.
+	:param data: Raw bytes for the reparse point structure
+	:type data: bytes | ctypes.c_char_p
+	:return: Parsed reparse point
+	:rtype: ReparsePoint
+	"""
+	return _parse_reparse_point(data, ReparsePointGUIDHeader)
 
 def alloc_empty_reparse_point(tag, header_struct, *hfields):
 	"""
@@ -196,8 +264,8 @@ def alloc_empty_reparse_point(tag, header_struct, *hfields):
 	:rtype: int, array[ctypes.c_char]
 	"""
 	if tag is None: tag = 0
-	buffer_size = MAX_REPARSE_BUFFER - header_struct.size
-	buffer = header_struct.pack(tag, buffer_size, 0, *hfields)
+	data_length = MAX_REPARSE_BUFFER - header_struct.size
+	buffer = header_struct.pack(tag, data_length, 0, *hfields)
 	return MAX_REPARSE_BUFFER, ctypes.create_string_buffer(buffer, MAX_REPARSE_BUFFER)
 
 def alloc_reparse_point(tag, header_struct, buffer_bytes, *hfields):
@@ -215,18 +283,19 @@ def alloc_reparse_point(tag, header_struct, buffer_bytes, *hfields):
 	:return: Struct data size, ctypes buffer
 	:rtype: int, array[ctypes.c_char]
 	"""
-	struct_size = header_struct.size + len(buffer_bytes)
-	header_bytes = header_struct.pack(tag, struct_size, 0, *hfields)
+	data_length = len(buffer_bytes)
+	struct_size = header_struct.size + data_length
+	header_bytes = header_struct.pack(tag, data_length, 0, *hfields)
 	return struct_size, ctypes.create_string_buffer(header_bytes + buffer_bytes, struct_size)
 
-def create_ms_reparse_point(tag, data=None, guid=False):
+def create_ms_reparse_point(tag, path=None, guid=False):
 	"""
 	Creates a ctypes buffer containing 
 	
 	:param tag: Reparse tag
 	:type tag: int
-	:param data: Filepath or raw buffer
-	:type data: str | None
+	:param path: Filepath or raw buffer
+	:type path: str | None
 	:param guid: Whether or not to use the GUID-based header
 	:type guid: bool | tuple[int,int] | tuple[long,long]
 	:return: Buffer size, ctypes buffer
@@ -241,7 +310,7 @@ def create_ms_reparse_point(tag, data=None, guid=False):
 			guid = (long_type(0), long_type(0),)
 	
 	# Allocate and fill our buffer
-	if data is None:
+	if path is None:
 		extra_attrs = guid if guid else empty_tuple
 		struct_size, struct_data = alloc_empty_reparse_point(tag, header_struct, *extra_attrs)
 	else:
@@ -250,24 +319,26 @@ def create_ms_reparse_point(tag, data=None, guid=False):
 		buffer_bytes, extra_attrs = None, empty_tuple
 		
 		# Extract path names and calculate sizes
-		flags, subst_name, print_name = extract_buffer_attrs(tag, data)
+		flags, subst_name, print_name = extract_buffer_attrs(tag, path)
 		subst_size, print_size = wsize(subst_name), wsize(print_name)
 		
 		if tag == IO_REPARSE_TAG_MOUNT_POINT:
 			buffer_struct = MountPointBuffer_struct
 			print_offset = subst_size + WCHAR_SIZE
-			path_buffer_format = lambda a,b: cstr2wstr(a) + cstr2wstr('\0') + cstr2wstr(b)
+			path_buffer_format = '{0}\0{1}'
 		elif tag == IO_REPARSE_TAG_SYMLINK:
 			buffer_struct = SymbolicLinkBuffer_struct
 			extra_attrs = (flags,)
 			print_offset = subst_size
-			path_buffer_format = lambda a,b: cstr2wstr(a) + cstr2wstr(b)
+			path_buffer_format = '{0}{1}'
 		else:
 			raise NotImplementedError('Unknown MS tag specified: 0x{:08X}'.format(tag))
 		
 		# Build actual path buffer
 		buffer_attrs = buffer_struct.pack(0, subst_size, print_offset, print_size,*extra_attrs)
-		buffer_bytes = buffer_attrs + path_buffer_format(subst_name, print_name)
+		buffer_bytes = buffer_attrs + cstr2wstr(
+			path_buffer_format.format(subst_name, print_name)
+		)
 		
 		extra_attrs = guid if guid else empty_tuple
 		struct_size, struct_data = alloc_reparse_point(tag, header_struct, buffer_bytes, *extra_attrs)
