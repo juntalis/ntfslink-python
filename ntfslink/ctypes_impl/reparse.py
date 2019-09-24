@@ -76,7 +76,7 @@ def read_reparse_point(path):
 	# Directory handle opened in a context to allow auto-closing on completion.
 	with open_file_r(path) as handle:
 		# Create our reparse point struct
-		out_size, out_buf = create_ms_reparse_point(IO_REPARSE_TAG_RESERVED_ZERO, None, True)
+		out_size, out_buf = create_ms_reparse_point(IO_REPARSE_TAG_RESERVED_ZERO, None)
 		deviceioctl(handle, FSCTL_GET_REPARSE_POINT, None, 0, out_buf, out_size)
-		reparse_point = parse_guid_reparse_point(out_buf)
-		return reparse_point, out_buf
+		reparse_point = parse_reparse_point(out_buf)
+		return reparse_point.substitute_name
