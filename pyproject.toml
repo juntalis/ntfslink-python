@@ -14,9 +14,23 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-cov"]
+typecheck = ["mypy"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ntfslink = ["py.typed", "*.pyi"]
+
+[tool.mypy]
+# The package supports Python >=3.8 at runtime (see requires-python above);
+# every annotation is deferred via `from __future__ import annotations`, so
+# checking against a newer stdlib here doesn't hide 3.8-incompatible code.
+python_version = "3.10"
+packages = ["ntfslink"]
+mypy_path = "src"
+strict = true
+warn_unused_ignores = true
 
 [tool.coverage.run]
 branch = true

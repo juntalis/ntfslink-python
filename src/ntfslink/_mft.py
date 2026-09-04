@@ -8,7 +8,10 @@ Win32 call involved, so it lives here once. Field layout matches the
 on-disk NTFS FILE record format (unchanged since NTFS 3.1 / Windows 2000),
 not any particular C struct someone hand-typed from a header.
 """
+from __future__ import annotations
+
 import struct
+from typing import Iterator
 
 from . import _consts as consts
 
@@ -36,11 +39,11 @@ _FILENAME_ATTRIBUTE_HEAD = struct.Struct('<QQQQQQQIIBB')
 _FRN_MASK = 0x0000FFFFFFFFFFFF
 
 
-def _file_record_buffer(raw_output_buffer):
+def _file_record_buffer(raw_output_buffer: bytes) -> bytes:
     return raw_output_buffer[_OUTPUT_BUFFER_HEADER.size:]
 
 
-def parse_filename_attributes(raw_output_buffer):
+def parse_filename_attributes(raw_output_buffer: bytes) -> Iterator[tuple[str, int, int]]:
     """Yield ``(name, parent_frn, name_type)`` for every $FILE_NAME
     attribute in one MFT record (one entry per hard link, plus a
     duplicate short/8.3-name entry for names that aren't already

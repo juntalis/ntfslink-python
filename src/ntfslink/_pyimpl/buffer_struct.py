@@ -5,6 +5,8 @@ ctypes.Structure-based alternative) benchmarked against each other in
 benchmarks/bench_backends.py to decide which becomes the maintained
 pure-Python fallback.
 """
+from __future__ import annotations
+
 import struct
 
 from .. import _consts as consts
@@ -16,7 +18,7 @@ _MOUNT_POINT_HEADER = struct.Struct('<HHHH')
 _SYMLINK_HEADER = struct.Struct('<HHHHI')
 
 
-def build_reparse_buffer(tag, subst_name, print_name, flags=0):
+def build_reparse_buffer(tag: int, subst_name: str, print_name: str, flags: int = 0) -> bytes:
     subst_bytes = subst_name.encode('utf-16-le')
     print_bytes = print_name.encode('utf-16-le')
 
@@ -42,7 +44,7 @@ def build_reparse_buffer(tag, subst_name, print_name, flags=0):
     return header + buf_header + path_buffer
 
 
-def parse_reparse_buffer(data):
+def parse_reparse_buffer(data: bytes) -> tuple[int, int, str, str]:
     data = bytes(data)
     tag, _length, _reserved = _HEADER.unpack_from(data, 0)
     offset = _HEADER.size

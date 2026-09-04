@@ -6,22 +6,25 @@ matter which backend (cext / ctypes / struct) supplies the low-level
 build_reparse_buffer/parse_reparse_buffer/set_reparse_point/
 get_reparse_buffer/delete_reparse_point_ioctl primitives.
 """
+from __future__ import annotations
+
 import os
+from typing import Optional
 
 from . import _consts as consts
 from ._attrs import is_directory_entry, is_reparse_point_safe
-from .backend import get_backend
+from .backend import Backend, OptBackend, get_backend
 from .exceptions import InvalidLinkError, InvalidTargetError
 
 
-def _substitute_and_print_names(tag, target):
+def _substitute_and_print_names(tag: int, target: str) -> tuple[str, str, int]:
     if tag == consts.IO_REPARSE_TAG_SYMLINK and not os.path.isabs(target):
         return target, target, consts.SYMBOLIC_LINK_FLAG_RELATIVE
     abs_target = os.path.abspath(target)
     return consts.PATHNAME_PREFIX + abs_target, abs_target, 0
 
 
-def create_junction(src, dst, backend=None):
+def create_junction(src: str, dst: str, backend: OptBackend = None) -> None:
     backend = backend or get_backend()
     if os.path.isfile(src):
         raise InvalidTargetError(src, 'Junctions can only target directories!')
@@ -49,7 +52,9 @@ def create_junction(src, dst, backend=None):
         raise
 
 
-def create_symlink(src, dst, target_is_directory=None, backend=None):
+def create_symlink(
+    src: str, dst: str, target_is_directory: Optional[bool] = None, backend: OptBackend = None,
+) -> None:
     backend = backend or get_backend()
     if target_is_directory is None:
         target_is_directory = os.path.isdir(src)
@@ -78,7 +83,7 @@ def create_symlink(src, dst, target_is_directory=None, backend=None):
         raise
 
 
-def read_link(path, backend=None):
+def read_link(path: str, backend: OptBackend = None) -> str:
     backend = backend or get_backend()
     if not is_reparse_point_safe(path):
         raise InvalidLinkError(path, 'Path is not a reparse point!')
@@ -90,7 +95,7 @@ def read_link(path, backend=None):
     return consts.strip_pathname_prefix(subst_name)
 
 
-def delete_reparse_point(path, backend=None):
+def delete_reparse_point(path: str, backend: OptBackend = None) -> None:
     backend = backend or get_backend()
     if not is_reparse_point_safe(path):
         raise InvalidLinkError(path, 'Path is not a reparse point!')
@@ -105,15 +110,15 @@ def delete_reparse_point(path, backend=None):
         os.remove(path)
 
 
-def is_junction(path, backend=None):
+def is_junction(path: str, backend: OptBackend = None) -> bool:
     return _tag_is(path, backend or get_backend(), consts.IO_REPARSE_TAG_MOUNT_POINT)
 
 
-def is_symlink(path, backend=None):
+def is_symlink(path: str, backend: OptBackend = None) -> bool:
     return _tag_is(path, backend or get_backend(), consts.IO_REPARSE_TAG_SYMLINK)
 
 
-def _tag_is(path, backend, expected_tag):
+def _tag_is(path: str, backend: Backend, expected_tag: int) -> bool:
     if not is_reparse_point_safe(path):
         return False
     raw = backend.get_reparse_buffer(path)

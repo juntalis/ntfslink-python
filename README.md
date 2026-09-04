@@ -157,5 +157,5 @@ The implementation is derived in part from research and ideas in
 [reparselib](https://github.com/amdf/reparselib), Windows API documentation,
 and the hard-link enumeration discussion credited by the original project.
 
-See the [project repository](https://github.com/Juntalis/ntfslink-python) for
+See the [project repository](https://github.com/juntalis/ntfslink-python) for
 source, issues, and development history.

@@ -1,6 +1,9 @@
 """Acquires the process privileges needed to manipulate reparse points."""
+from __future__ import annotations
+
 import ctypes
 import ctypes.wintypes
+from typing import Sequence
 
 from .. import _consts as consts
 from . import winapi
@@ -14,7 +17,7 @@ _OBTAINABLE_PRIVILEGES = (
 _done = False
 
 
-def obtain_privileges(names):
+def obtain_privileges(names: Sequence[str]) -> None:
     if not names:
         return
     hproc = winapi.GetCurrentProcess()
@@ -31,14 +34,14 @@ def obtain_privileges(names):
         winapi.CloseHandle(htoken)
 
 
-def ensure_privileges():
+def ensure_privileges() -> None:
     global _done
     if not _done:
         obtain_privileges(_OBTAINABLE_PRIVILEGES)
         _done = True
 
 
-def reset_for_tests():
+def reset_for_tests() -> None:
     """Test-only hook: forget that privileges were already acquired."""
     global _done
     _done = False

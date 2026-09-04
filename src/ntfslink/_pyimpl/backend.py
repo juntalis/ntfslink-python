@@ -4,21 +4,25 @@ The two selectable buffer codecs (``ctypes`` vs ``struct``, see
 buffer_ctypes.py / buffer_struct.py) share every other primitive here,
 since the choice between them only ever affects reparse-buffer packing.
 """
+from __future__ import annotations
+
 import contextlib
 import ctypes
 import struct
 import types
 from ctypes import wintypes
+from typing import Iterator
 
 from .. import _consts as consts
+from ..backend import Backend
 from . import privileges, volumes, winapi
 
 _HEADER_ONLY = struct.Struct('<IHH')
 
 
 @contextlib.contextmanager
-def _open_handle(path, access, disposition=consts.OPEN_EXISTING,
-                  flags=consts.FILE_FLAG_REPARSE_BACKUP):
+def _open_handle(path: str, access: int, disposition: int = consts.OPEN_EXISTING,
+                  flags: int = consts.FILE_FLAG_REPARSE_BACKUP) -> Iterator[int]:
     privileges.ensure_privileges()
     handle = winapi.CreateFileW(
         path, access, consts.FILE_SHARE_ALL, None,
@@ -30,7 +34,7 @@ def _open_handle(path, access, disposition=consts.OPEN_EXISTING,
         winapi.CloseHandle(handle)
 
 
-def set_reparse_point(path, buffer):
+def set_reparse_point(path: str, buffer: bytes) -> None:
     with _open_handle(path, consts.GENERIC_WRITE) as handle:
         bytes_returned = wintypes.DWORD(0)
         winapi.DeviceIoControl(
@@ -40,7 +44,7 @@ def set_reparse_point(path, buffer):
         )
 
 
-def get_reparse_buffer(path):
+def get_reparse_buffer(path: str) -> bytes:
     out_buf = ctypes.create_string_buffer(consts.MAX_REPARSE_BUFFER_SIZE)
     with _open_handle(path, consts.GENERIC_READ) as handle:
         bytes_returned = wintypes.DWORD(0)
@@ -51,7 +55,7 @@ def get_reparse_buffer(path):
         return out_buf.raw[:bytes_returned.value]
 
 
-def delete_reparse_point_ioctl(path, tag):
+def delete_reparse_point_ioctl(path: str, tag: int) -> None:
     header = _HEADER_ONLY.pack(tag, 0, 0)
     with _open_handle(path, consts.GENERIC_WRITE) as handle:
         bytes_returned = wintypes.DWORD(0)
@@ -62,32 +66,32 @@ def delete_reparse_point_ioctl(path, tag):
         )
 
 
-def create_hard_link(src, dst):
+def create_hard_link(src: str, dst: str) -> None:
     winapi.CreateHardLinkW(dst, src, None)
 
 
-def _file_info(path):
+def _file_info(path: str) -> winapi.BY_HANDLE_FILE_INFORMATION:
     info = winapi.BY_HANDLE_FILE_INFORMATION()
     with _open_handle(path, 0x80000000, flags=consts.FILE_FLAG_BACKUP_SEMANTICS) as handle:
         winapi.GetFileInformationByHandle(handle, ctypes.byref(info))
     return info
 
 
-def get_link_count(path):
-    return _file_info(path).nNumberOfLinks
+def get_link_count(path: str) -> int:
+    return int(_file_info(path).nNumberOfLinks)
 
 
-def get_file_reference_number(path):
+def get_file_reference_number(path: str) -> int:
     info = _file_info(path)
-    return (info.nFileIndexHigh << 32) | info.nFileIndexLow
+    return int((info.nFileIndexHigh << 32) | info.nFileIndexLow)
 
 
-def _volume_device_path(volume_root_path):
+def _volume_device_path(volume_root_path: str) -> str:
     drive = volume_root_path.rstrip('\\')
     return f'\\\\.\\{drive}'
 
 
-def get_ntfs_file_record(volume_root_path, file_reference_number):
+def get_ntfs_file_record(volume_root_path: str, file_reference_number: int) -> bytes:
     device_path = _volume_device_path(volume_root_path)
     input_buf = struct.pack('<q', file_reference_number)
     out_size = consts.MAX_REPARSE_BUFFER_SIZE
@@ -102,15 +106,16 @@ def get_ntfs_file_record(volume_root_path, file_reference_number):
         return out_buf.raw[:bytes_returned.value]
 
 
-def query_volume_flags(path, use_cache=False):
+def query_volume_flags(path: str, use_cache: bool = False) -> int:
     return volumes.volume_flags(path, use_cache)
 
 
-def ensure_privileges():
+def ensure_privileges() -> None:
     privileges.ensure_privileges()
 
 
-def make_backend(codec):
+def make_backend(codec: str) -> Backend:
+    codec_module: types.ModuleType
     if codec == 'ctypes':
         from . import buffer_ctypes as codec_module
     elif codec == 'struct':

@@ -6,15 +6,18 @@ FindFirstFileNameW/FindNextFileNameW APIs. See Prompt.md ("Hardlink
 creation and enumeration, and the Windows XP SP2 baseline") for the full
 rationale.
 """
+from __future__ import annotations
+
 import os
+from typing import Dict, List
 
 from . import _consts as consts
 from . import _mft
-from .backend import get_backend
+from .backend import Backend, OptBackend, get_backend
 from .exceptions import InvalidLinkError, InvalidTargetError
 
 
-def create_hardlink(src, dst, backend=None):
+def create_hardlink(src: str, dst: str, backend: OptBackend = None) -> None:
     backend = backend or get_backend()
     if not os.path.exists(src):
         raise InvalidTargetError(src, 'Hard link source does not exist!')
@@ -26,12 +29,14 @@ def create_hardlink(src, dst, backend=None):
     backend.create_hard_link(src, dst)
 
 
-def hardlink_count(path, backend=None):
+def hardlink_count(path: str, backend: OptBackend = None) -> int:
     backend = backend or get_backend()
     return backend.get_link_count(path)
 
 
-def _resolve_directory_path(frn, volume_root, backend, cache):
+def _resolve_directory_path(
+    frn: int, volume_root: str, backend: Backend, cache: Dict[int, str],
+) -> str:
     if frn == consts.NTFS_ROOT_DIRECTORY_FRN:
         return volume_root
     if frn in cache:
@@ -48,13 +53,13 @@ def _resolve_directory_path(frn, volume_root, backend, cache):
     return full_path
 
 
-def enumerate_hardlinks(path, backend=None):
+def enumerate_hardlinks(path: str, backend: OptBackend = None) -> List[str]:
     backend = backend or get_backend()
     volume_root = backend.volume_root(path)
     frn = backend.get_file_reference_number(path)
     raw = backend.get_ntfs_file_record(volume_root, frn)
 
-    cache = {}
+    cache: Dict[int, str] = {}
     paths = []
     for name, parent_frn, name_type in _mft.parse_filename_attributes(raw):
         if name_type == consts.NTFS_FILENAME_TYPE_DOS:

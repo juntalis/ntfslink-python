@@ -1,6 +1,9 @@
 """Shared ctypes Win32 bindings used by both pure-Python buffer codecs."""
+from __future__ import annotations
+
 import ctypes
 from ctypes import wintypes
+from typing import Any, Callable, Tuple
 
 from .. import exceptions
 
@@ -12,13 +15,13 @@ INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
 LPOVERLAPPED = wintypes.LPVOID
 
 
-def check_bool(result, func, args):
+def check_bool(result: Any, func: Callable[..., Any], args: Tuple[Any, ...]) -> Any:
     if not result:
         raise ctypes.WinError(ctypes.get_last_error())
     return args
 
 
-def check_handle(result, func, args):
+def check_handle(result: Any, func: Callable[..., Any], args: Tuple[Any, ...]) -> Any:
     if not result or result == INVALID_HANDLE_VALUE:
         raise exceptions.InvalidHandleError(
             f'{func.__name__} returned an invalid handle '

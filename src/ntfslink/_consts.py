@@ -1,4 +1,5 @@
 """Win32/NTFS constants shared by every backend."""
+from __future__ import annotations
 
 # Generic access
 GENERIC_READ = 0x80000000
@@ -36,7 +37,7 @@ FILE_ANY_ACCESS = 0
 FILE_SPECIAL_ACCESS = FILE_ANY_ACCESS
 
 
-def CTL_CODE(device_type, function, method, access):
+def CTL_CODE(device_type: int, function: int, method: int, access: int) -> int:
     return (device_type << 16) | (access << 14) | (function << 2) | method
 
 
@@ -81,7 +82,7 @@ ATTRIBUTE_TYPE_FILE_NAME = 0x30
 ATTRIBUTE_TYPE_END = 0xFFFFFFFF
 
 
-def strip_pathname_prefix(path):
+def strip_pathname_prefix(path: str) -> str:
     if path.startswith(PATHNAME_PREFIX):
         return path[PATHNAME_PREFIX_LEN:]
     return path
