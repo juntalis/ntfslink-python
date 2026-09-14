@@ -80,6 +80,10 @@ def _resolve(override: Optional[str] = None) -> tuple[Backend, str]:
 
 
 def get_backend() -> Backend:
+    """Return the process-wide active backend, resolving and caching it on
+    first call from the ``NTFSLINK_BACKEND`` environment variable (see the
+    module docstring). Every public API function calls this implicitly
+    when no explicit ``backend=`` override is given."""
     global _active, _active_kind
     if _active is None:
         _active, _active_kind = _resolve()
@@ -87,12 +91,20 @@ def get_backend() -> Backend:
 
 
 def active_backend() -> str:
+    """Return the name (``'cext'``, ``'struct'``, or ``'ctypes'``) of the
+    currently active backend, resolving it first if needed."""
     get_backend()
     assert _active_kind is not None
     return _active_kind
 
 
 def available_backends() -> frozenset[str]:
+    """Return the names of every backend importable in this process.
+
+    ``'ctypes'`` and ``'struct'`` are always available since they're pure
+    Python; ``'cext'`` is included only when the compiled extension module
+    was built and is importable.
+    """
     result = {'ctypes', 'struct'}
     try:
         _load_cext()

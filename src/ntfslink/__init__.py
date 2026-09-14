@@ -1,5 +1,16 @@
 """ntfslink: NTFS reparse point (junction/symlink) and hard link
-manipulation for Windows."""
+manipulation for Windows.
+
+The public API is re-exported here directly; submodules (:mod:`.reparse`,
+:mod:`.hardlinks`, :mod:`.backend`) are implementation detail and not
+part of the stable interface except where noted.
+
+>>> import ntfslink
+>>> ntfslink.create_junction(r"C:\\data\\source", r"C:\\data\\current")
+>>> ntfslink.read_link(r"C:\\data\\current")
+'C:\\\\data\\\\source'
+>>> ntfslink.delete_reparse_point(r"C:\\data\\current")
+"""
 import sys
 
 if sys.platform != 'win32':  # pragma: no cover — covered by test_import_guard.py in a subprocess, invisible to this process's coverage run

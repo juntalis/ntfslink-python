@@ -11,7 +11,7 @@ import ctypes
 import struct
 import types
 from ctypes import wintypes
-from typing import Iterator
+from typing import Generator
 
 from .. import _consts as consts
 from ..backend import Backend
@@ -22,7 +22,7 @@ _HEADER_ONLY = struct.Struct('<IHH')
 
 @contextlib.contextmanager
 def _open_handle(path: str, access: int, disposition: int = consts.OPEN_EXISTING,
-                  flags: int = consts.FILE_FLAG_REPARSE_BACKUP) -> Iterator[int]:
+                  flags: int = consts.FILE_FLAG_REPARSE_BACKUP) -> Generator[int, None, None]:
     privileges.ensure_privileges()
     handle = winapi.CreateFileW(
         path, access, consts.FILE_SHARE_ALL, None,

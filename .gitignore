@@ -8,3 +8,5 @@ htmlcov/
 .vscode/
 .pytest_cache/
 .mypy_cache/
+docs/_build/
+dist/

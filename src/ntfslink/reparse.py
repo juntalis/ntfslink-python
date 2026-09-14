@@ -25,6 +25,23 @@ def _substitute_and_print_names(tag: int, target: str) -> tuple[str, str, int]:
 
 
 def create_junction(src: str, dst: str, backend: OptBackend = None) -> None:
+    """Create a directory junction (mount point) at ``dst`` targeting ``src``.
+
+    ``src`` must be an existing directory; ``dst`` must not already exist as
+    a file. If ``dst`` does not exist, it is created and populated with the
+    reparse point; if the reparse point fails to install, the created
+    directory is rolled back and the underlying exception re-raised.
+
+    Junction targets are always stored as absolute paths, so relative
+    ``src`` values are resolved with :func:`os.path.abspath` before being
+    written to the reparse buffer.
+
+    :param src: Existing directory the junction should point to.
+    :param dst: Path at which to create the junction.
+    :param backend: Backend override, primarily useful for testing.
+    :raises InvalidTargetError: ``src`` is a file, or does not exist.
+    :raises InvalidLinkError: A file already exists at ``dst``.
+    """
     backend = backend or get_backend()
     if os.path.isfile(src):
         raise InvalidTargetError(src, 'Junctions can only target directories!')
@@ -55,6 +72,26 @@ def create_junction(src: str, dst: str, backend: OptBackend = None) -> None:
 def create_symlink(
     src: str, dst: str, target_is_directory: Optional[bool] = None, backend: OptBackend = None,
 ) -> None:
+    """Create a file or directory symbolic link at ``dst`` targeting ``src``.
+
+    Unlike junctions, symlink targets may be relative; a relative ``src``
+    is stored verbatim (interpreted relative to ``dst``'s directory at
+    resolution time), while an absolute ``src`` is normalized with
+    :func:`os.path.abspath`.
+
+    ``target_is_directory`` controls whether ``dst`` is created as a
+    directory or file placeholder before the reparse point is attached.
+    When omitted, it is inferred from whether ``src`` currently exists and
+    is a directory — pass it explicitly when ``src`` does not exist yet.
+
+    :param src: Path the symlink should point to. Existing or not.
+    :param dst: Path at which to create the symlink.
+    :param target_is_directory: Force directory- or file-mode symlink
+        creation. Required when ``src`` doesn't exist yet.
+    :param backend: Backend override, primarily useful for testing.
+    :raises InvalidLinkError: A file, directory, or reparse point already
+        exists at ``dst``.
+    """
     backend = backend or get_backend()
     if target_is_directory is None:
         target_is_directory = os.path.isdir(src)
@@ -84,6 +121,16 @@ def create_symlink(
 
 
 def read_link(path: str, backend: OptBackend = None) -> str:
+    """Return the target path stored in a junction or symbolic link.
+
+    :param path: Path to a junction or symbolic link.
+    :param backend: Backend override, primarily useful for testing.
+    :returns: The link's target, with any internal ``\\\\??\\`` device
+        prefix stripped.
+    :raises InvalidLinkError: ``path`` is not a reparse point.
+    :raises NotImplementedError: ``path`` is a reparse point of a type
+        other than a junction or symbolic link.
+    """
     backend = backend or get_backend()
     if not is_reparse_point_safe(path):
         raise InvalidLinkError(path, 'Path is not a reparse point!')
@@ -96,6 +143,16 @@ def read_link(path: str, backend: OptBackend = None) -> str:
 
 
 def delete_reparse_point(path: str, backend: OptBackend = None) -> None:
+    """Remove a junction or symbolic link and its on-disk placeholder.
+
+    The reparse point is detached via the appropriate ``FSCTL`` before the
+    now-plain placeholder (directory or file) is removed, so this cleans
+    up both the link and the empty directory/file it was attached to.
+
+    :param path: Path to a junction or symbolic link.
+    :param backend: Backend override, primarily useful for testing.
+    :raises InvalidLinkError: ``path`` is not a reparse point.
+    """
     backend = backend or get_backend()
     if not is_reparse_point_safe(path):
         raise InvalidLinkError(path, 'Path is not a reparse point!')
@@ -111,10 +168,26 @@ def delete_reparse_point(path: str, backend: OptBackend = None) -> None:
 
 
 def is_junction(path: str, backend: OptBackend = None) -> bool:
+    """Return whether ``path`` is a directory junction (mount point).
+
+    Returns ``False`` (rather than raising) for a non-existent path or a
+    reparse point of a different type.
+
+    :param path: Path to check.
+    :param backend: Backend override, primarily useful for testing.
+    """
     return _tag_is(path, backend or get_backend(), consts.IO_REPARSE_TAG_MOUNT_POINT)
 
 
 def is_symlink(path: str, backend: OptBackend = None) -> bool:
+    """Return whether ``path`` is a file or directory symbolic link.
+
+    Returns ``False`` (rather than raising) for a non-existent path or a
+    reparse point of a different type.
+
+    :param path: Path to check.
+    :param backend: Backend override, primarily useful for testing.
+    """
     return _tag_is(path, backend or get_backend(), consts.IO_REPARSE_TAG_SYMLINK)
 
 

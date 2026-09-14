@@ -18,6 +18,17 @@ from .exceptions import InvalidLinkError, InvalidTargetError
 
 
 def create_hardlink(src: str, dst: str, backend: OptBackend = None) -> None:
+    """Create a hard link at ``dst`` pointing to the existing file ``src``.
+
+    NTFS does not support hard links to directories, so ``src`` must be an
+    existing file.
+
+    :param src: Existing file to link to.
+    :param dst: Path at which to create the hard link.
+    :param backend: Backend override, primarily useful for testing.
+    :raises InvalidTargetError: ``src`` does not exist or is a directory.
+    :raises InvalidLinkError: A file already exists at ``dst``.
+    """
     backend = backend or get_backend()
     if not os.path.exists(src):
         raise InvalidTargetError(src, 'Hard link source does not exist!')
@@ -30,6 +41,12 @@ def create_hardlink(src: str, dst: str, backend: OptBackend = None) -> None:
 
 
 def hardlink_count(path: str, backend: OptBackend = None) -> int:
+    """Return the number of hard links (NTFS link count) sharing ``path``'s
+    file record, including ``path`` itself.
+
+    :param path: Path to an existing file.
+    :param backend: Backend override, primarily useful for testing.
+    """
     backend = backend or get_backend()
     return backend.get_link_count(path)
 
@@ -54,6 +71,21 @@ def _resolve_directory_path(
 
 
 def enumerate_hardlinks(path: str, backend: OptBackend = None) -> List[str]:
+    """Return the full paths of every hard link sharing ``path``'s file
+    record, including ``path`` itself.
+
+    Paths are reconstructed by walking ``FILE_NAME`` attributes in the
+    file's raw NTFS MFT record (via ``FSCTL_GET_NTFS_FILE_RECORD``) up to
+    the volume root, rather than relying on the Vista-only
+    ``FindFirstFileNameW``/``FindNextFileNameW`` APIs. This requires an
+    elevated process to open a handle to the volume; on systems without
+    that access, an OS-level error is raised rather than returning an
+    incomplete list. Intended for individual files, not bulk MFT scanning.
+
+    :param path: Path to an existing file.
+    :param backend: Backend override, primarily useful for testing.
+    :returns: Absolute paths of every hard link to the file.
+    """
     backend = backend or get_backend()
     volume_root = backend.volume_root(path)
     frn = backend.get_file_reference_number(path)
