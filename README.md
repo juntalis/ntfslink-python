@@ -24,7 +24,15 @@ supports capability checks for these features.
 
 ## Installation
 
-Install from a checkout with:
+Install the latest release from PyPI:
+
+```text
+pip install ntfslink-py
+```
+
+The distribution is named `ntfslink-py`, but the import name is `ntfslink`.
+
+To install from a source checkout instead:
 
 ```text
 python -m pip install .
